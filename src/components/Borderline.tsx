@@ -16,7 +16,6 @@ class MapSet {
     }
     //this._data[key].add(JSON.stringify(value));
     this._data[key].add(value);
-
   }
 
   delete(key: any, value: any) {
@@ -30,11 +29,10 @@ class MapSet {
   get(key: any) {
     //return Array.from(this._data[key] || []).map((value) => JSON.parse(value));
     if (this._data[key]) {
-    return Array.from(this._data[key]);
+      return Array.from(this._data[key]);
     } else {
-      return []
+      return [];
     }
-
   }
 }
 
@@ -87,7 +85,7 @@ const Borderline = ({ children, ...props }: any) => {
             yxPoints.add(startPoint[1], startPoint[0]);
           }
         });
-        
+
         console.log("All Points List:", allPointsList);
 
         // find the point with the lowest y axis (use lowest x axis if multiple points have the same y axis) to get the upper left corner
@@ -147,46 +145,42 @@ const Borderline = ({ children, ...props }: any) => {
       
       note: the xyPoints look up points like xyPoints(x) -> [y1,y2...] and xyPoints(y) -> [x1,x2...]
       */
-     
-      function findDirectionBasis(
-        previousPoint: Array<number>,
-        currentPoint: Array<number>
-      ) {
-        const [x1, y1] = previousPoint;
-        const [x2, y2] = currentPoint;
 
-        if (x1 === x2) {
-          return [0, -Math.sign(y2 - y1)];
-        } else {
-          return [-Math.sign(x2 - x1), 0];
+        function findDirectionBasis(
+          previousPoint: Array<number>,
+          currentPoint: Array<number>,
+        ) {
+          const [x1, y1] = previousPoint;
+          const [x2, y2] = currentPoint;
+
+          if (x1 === x2) {
+            return [0, -Math.sign(y2 - y1)];
+          } else {
+            return [-Math.sign(x2 - x1), 0];
+          }
         }
-      }
-      
-      
-      
-      
-      function findNextPoint(
-        previousPoint: Array<number>,
-        currentPoint: Array<number>,
-        xyPoints: MapSet,
-        yxPoints: MapSet,
-      ) {
-        //const [x1, y1] = previousPoint;
-        const [x2, y2] = currentPoint;
-      
-        const [dx, dy] = findDirectionBasis(previousPoint, currentPoint);
-        
-        
-        
-        const directions = [
-          [0,-1], [1,0], [0,1], [-1,0]
-        ];
-        
-        
-        
-        // [0,1] => [-1,0] -> [1,0] -> [-1,0]
-        // [1,0] => [0,1] -> [-1,0] -> [0,-1]
-        /*
+
+        function findNextPoint(
+          previousPoint: Array<number>,
+          currentPoint: Array<number>,
+          xyPoints: MapSet,
+          yxPoints: MapSet,
+        ) {
+          //const [x1, y1] = previousPoint;
+          const [x2, y2] = currentPoint;
+
+          const [dx, dy] = findDirectionBasis(previousPoint, currentPoint);
+
+          const directions = [
+            [0, -1],
+            [1, 0],
+            [0, 1],
+            [-1, 0],
+          ];
+
+          // [0,1] => [-1,0] -> [1,0] -> [-1,0]
+          // [1,0] => [0,1] -> [-1,0] -> [0,-1]
+          /*
         let directions = []
         if (dx === 0 && dy === 1) { //[0,1] up
             directions = [[1,0], [-1,0], [0,1]]; // left, right, up
@@ -198,51 +192,51 @@ const Borderline = ({ children, ...props }: any) => {
             directions = [[0,-1], [0,1], [-1,0]]; // up, down, left
         }
         */
-        
-        //directions = [ // straight
-        //  [dy,dx], // up 
-        //  [-dy, -dx], // down
-        //  [dx,dy] // straight
-        //]
-        
-        console.log([x2, y2], [dx, dy], directions);
-        
-        
-        //directions = [
-        //  [dy,dx], [-dy, -dx], [dx,dy]
-        //]
-        
-        const directionIndex = directions.findIndex((direction) => direction[0] === dx && direction[1] === dy);
-        console.log("Direction Index:", directionIndex);
-        
-        for(let i = 0; i < directions.length; i++) {
-          const [dx,dy] = directions[(directionIndex + i + 1) % directions.length];
-        //for (const [dx,dy] of directions) {
-          if (dx === 0) {
-            const yPoints = xyPoints.get(x2);
-            const nextY = yPoints.filter((y) => dy > 0 ? y > y2 : y < y2).sort((a,b) => dy > 0 ? a - b : b - a)[0];
-            if (nextY !== undefined) {
-              
-              return [x2, nextY];
-              
+
+          //directions = [ // straight
+          //  [dy,dx], // up
+          //  [-dy, -dx], // down
+          //  [dx,dy] // straight
+          //]
+
+          console.log([x2, y2], [dx, dy], directions);
+
+          //directions = [
+          //  [dy,dx], [-dy, -dx], [dx,dy]
+          //]
+
+          const directionIndex = directions.findIndex(
+            (direction) => direction[0] === dx && direction[1] === dy,
+          );
+          console.log("Direction Index:", directionIndex);
+
+          for (let i = 0; i < directions.length; i++) {
+            const [dx, dy] =
+              directions[(directionIndex + i + 1) % directions.length];
+            //for (const [dx,dy] of directions) {
+            if (dx === 0) {
+              const yPoints = xyPoints.get(x2);
+              const nextY = yPoints
+                .filter((y) => (dy > 0 ? y > y2 : y < y2))
+                .sort((a, b) => (dy > 0 ? a - b : b - a))[0];
+              if (nextY !== undefined) {
+                return [x2, nextY];
+              }
             }
-          }
-          if (dy === 0) {
-            const xPoints = yxPoints.get(y2);
-            const nextX = xPoints.filter((x) => dx > 0 ? x > x2 : x < x2).sort((a,b) => dx > 0 ? a - b : b - a)[0];
-            if (nextX !== undefined) {
-              
+            if (dy === 0) {
+              const xPoints = yxPoints.get(y2);
+              const nextX = xPoints
+                .filter((x) => (dx > 0 ? x > x2 : x < x2))
+                .sort((a, b) => (dx > 0 ? a - b : b - a))[0];
+              if (nextX !== undefined) {
                 return [nextX, y2];
-              
+              }
             }
           }
-      }
-      
-        // If no next point is found, return null
-        return null;
-      }
-        
-        
+
+          // If no next point is found, return null
+          return null;
+        }
 
         console.log("XY Points:", xyPoints);
 
@@ -253,34 +247,40 @@ const Borderline = ({ children, ...props }: any) => {
           const [x, y] = point;
           const xPoints = yxPoints.get(y);
           //console.log("X Points:", xPoints);
-          const nextX = xPoints.filter((cx) => cx > x).sort((a,b) => a - b)[0];
+          const nextX = xPoints.filter((cx) => cx > x).sort((a, b) => a - b)[0];
           //console.log([nextX, y])
           return [nextX, y];
         }
-        
-        
+
         //console.log(findNextPoint(upperLeftPoint, allPointsList[1],xyPoints, yxPoints));
-        
-        let currentPoint = upperLeftPoint; 
+
+        let currentPoint = upperLeftPoint;
         // get the minimum value in yxPoints.get(upperLeftPoint[1])
-        let nextPoint = findDirectLeftPoint(currentPoint, yxPoints)
+        let nextPoint = findDirectLeftPoint(currentPoint, yxPoints);
         let newLines = [[currentPoint, nextPoint]];
-        
-        
+
         //let tempPoint = findNextPoint(currentPoint, nextPoint, xyPoints, yxPoints);
         //currentPoint = nextPoint;
         //nextPoint = tempPoint;
         //newLines.push([currentPoint, nextPoint]);
-        
+
         //tempPoint = findNextPoint(currentPoint, nextPoint, xyPoints, yxPoints);
         //currentPoint = nextPoint;
         //nextPoint = tempPoint;
         //newLines.push([currentPoint, nextPoint]);
-        
+
         let iterations = 0;
         let tempPoint = null;
-        while ((currentPoint !== upperLeftPoint || iterations === 0) && (iterations < 20)) {
-          tempPoint = findNextPoint(currentPoint, nextPoint, xyPoints, yxPoints);
+        while (
+          (currentPoint !== upperLeftPoint || iterations === 0) &&
+          iterations < 20
+        ) {
+          tempPoint = findNextPoint(
+            currentPoint,
+            nextPoint,
+            xyPoints,
+            yxPoints,
+          );
           currentPoint = nextPoint;
           nextPoint = tempPoint;
           newLines.push([currentPoint, nextPoint]);
@@ -290,7 +290,6 @@ const Borderline = ({ children, ...props }: any) => {
         console.log("currentPoint:", currentPoint);
         console.log("nextPoint:", nextPoint);
         console.log("Lines:", lines);
-         
       }
 
       //});
@@ -304,11 +303,9 @@ const Borderline = ({ children, ...props }: any) => {
 
     calculateCorners();
 
-    
     window.addEventListener("resize", calculateCorners);
-    window.addEventListener('scroll', calculateCorners);
+    window.addEventListener("scroll", calculateCorners);
 
-    
     const resizeObserver = new ResizeObserver(calculateCorners);
 
     // Observe size changes on each child of the ref
@@ -322,8 +319,7 @@ const Borderline = ({ children, ...props }: any) => {
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", calculateCorners);
-      window.removeEventListener('scroll', calculateCorners);
-
+      window.removeEventListener("scroll", calculateCorners);
     };
   }, []);
 
@@ -348,18 +344,27 @@ const Borderline = ({ children, ...props }: any) => {
           }}
         />
       ))}
-      <svg style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none"}}>
-{lines.map((line, index) => (
-  <path
-    key={index}
-    d={`M ${line[0][0]} ${line[0][1]} L ${line[1][0]} ${line[1][1]}`}
-    // the strokes are red, with redness of proportioral to the index + 1
-    stroke="red"
-    strokeWidth={4}
-    fill="transparent"
-  />
-))}
-</svg>
+      <svg
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+        }}
+      >
+        {lines.map((line, index) => (
+          <path
+            key={index}
+            d={`M ${line[0][0]} ${line[0][1]} L ${line[1][0]} ${line[1][1]}`}
+            // the strokes are red, with redness of proportioral to the index + 1
+            stroke="red"
+            strokeWidth={4}
+            fill="transparent"
+          />
+        ))}
+      </svg>
     </>
   );
 };
