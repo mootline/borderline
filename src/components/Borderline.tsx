@@ -40,6 +40,7 @@ const Borderline = ({ children, ...props }: any) => {
   const ref = useRef<HTMLDivElement>(null);
   const [corners, setCorners] = useState<Array<Array<number>>>([]);
   const [lines, setLines] = useState<Array<Array<Array<number>>>>([]);
+  const [currentPointLocation, setCurrentPointLocation] = useState<Array<number>>([0,0]);
 
   let animationFrameId = null;
 
@@ -60,6 +61,8 @@ const Borderline = ({ children, ...props }: any) => {
         const yxPoints = new MapSet();
 
         let allPointsList = [];
+        let allLinesList = [];
+        let visitedPoints = new Set();
 
         Array.from(ref.current.children).map((child: Element) => {
           const rect = child.getBoundingClientRect();
@@ -80,6 +83,7 @@ const Borderline = ({ children, ...props }: any) => {
           ) {
             const startPoint = rectPoints[pointIndex];
             const endPoint = rectPoints[(pointIndex + 1) % rectPoints.length];
+            allLinesList.push([startPoint, endPoint]);
 
             xyPoints.add(startPoint[0], startPoint[1]);
             yxPoints.add(startPoint[1], startPoint[0]);
@@ -169,48 +173,30 @@ const Borderline = ({ children, ...props }: any) => {
           //const [x1, y1] = previousPoint;
           const [x2, y2] = currentPoint;
 
-          const [dx, dy] = findDirectionBasis(previousPoint, currentPoint);
+          const [dx2, dy2] = findDirectionBasis(previousPoint, currentPoint);
 
+          
           const directions = [
-            [0, -1],
-            [1, 0],
-            [0, 1],
-            [-1, 0],
+            [0, -1], // up
+            [1, 0], // right
+            [0, 1], // down
+            [-1, 0], // left
           ];
+        
+         
 
-          // [0,1] => [-1,0] -> [1,0] -> [-1,0]
-          // [1,0] => [0,1] -> [-1,0] -> [0,-1]
-          /*
-        let directions = []
-        if (dx === 0 && dy === 1) { //[0,1] up
-            directions = [[1,0], [-1,0], [0,1]]; // left, right, up
-        } else if (dx === 1 && dy === 0) { //[1,0] right
-            directions = [[0,1], [0,-1],  [1,0]]; // up, down, right
-        } else if (dx === 0 && dy === -1) { //[0,-1] down
-            directions = [ [1,0], [-1,0], [0,-1]]; // right, left, down
-        } else if (dx === -1 && dy === 0) { //[-1,0] left
-            directions = [[0,-1], [0,1], [-1,0]]; // up, down, left
-        }
-        */
-
-          //directions = [ // straight
-          //  [dy,dx], // up
-          //  [-dy, -dx], // down
-          //  [dx,dy] // straight
-          //]
-
-          console.log([x2, y2], [dx, dy], directions);
+          console.log([x2, y2], [dx2, dy2], directions);
 
           //directions = [
           //  [dy,dx], [-dy, -dx], [dx,dy]
           //]
 
           const directionIndex = directions.findIndex(
-            (direction) => direction[0] === dx && direction[1] === dy,
+            (direction) => direction[0] === dx2 && direction[1] === dy2,
           );
           console.log("Direction Index:", directionIndex);
 
-          for (let i = 0; i < directions.length; i++) {
+          for (const i of [0, 2, 1, 3]) {
             const [dx, dy] =
               directions[(directionIndex + i + 1) % directions.length];
             //for (const [dx,dy] of directions) {
@@ -219,8 +205,11 @@ const Borderline = ({ children, ...props }: any) => {
               const nextY = yPoints
                 .filter((y) => (dy > 0 ? y > y2 : y < y2))
                 .sort((a, b) => (dy > 0 ? a - b : b - a))[0];
-              if (nextY !== undefined) {
-                return [x2, nextY];
+              if (nextY !== undefined) { 
+                if (!visitedPoints.has(JSON.stringify([x2, nextY]))){
+                  console.log("Next Point:", [x2, nextY], visitedPoints);
+                  return [x2, nextY];
+                }
               }
             }
             if (dy === 0) {
@@ -229,13 +218,21 @@ const Borderline = ({ children, ...props }: any) => {
                 .filter((x) => (dx > 0 ? x > x2 : x < x2))
                 .sort((a, b) => (dx > 0 ? a - b : b - a))[0];
               if (nextX !== undefined) {
-                return [nextX, y2];
+                if ( !visitedPoints.has(JSON.stringify([nextX, y2]))){
+                  console.log("Next Point:", [nextX, y2], 
+                  visitedPoints);
+                    return [nextX, y2];
+                    
+                  }
+                }
+                
               }
             }
-          }
+        
+        
 
           // If no next point is found, return null
-          return null;
+          return null
         }
 
         console.log("XY Points:", xyPoints);
@@ -272,9 +269,9 @@ const Borderline = ({ children, ...props }: any) => {
         let iterations = 0;
         let tempPoint = null;
         while (
-          (currentPoint !== upperLeftPoint || iterations === 0) &&
-          iterations < 20
-        ) {
+          (nextPoint != upperLeftPoint || iterations === 0) &&
+          iterations < 15
+        ) { 
           tempPoint = findNextPoint(
             currentPoint,
             nextPoint,
@@ -282,15 +279,24 @@ const Borderline = ({ children, ...props }: any) => {
             yxPoints,
           );
           currentPoint = nextPoint;
+          setCurrentPointLocation(currentPoint);
           nextPoint = tempPoint;
+          
           newLines.push([currentPoint, nextPoint]);
+          
+          visitedPoints.add(JSON.stringify(currentPoint));
           iterations++;
-        }
-        setLines(newLines);
-        console.log("currentPoint:", currentPoint);
+          
+          
+          console.log("currentPoint:", currentPoint);
         console.log("nextPoint:", nextPoint);
         console.log("Lines:", lines);
-      }
+          console.log([nextPoint, upperLeftPoint],(nextPoint != upperLeftPoint))
+        
+        }
+        setLines(newLines);
+        console.log("Lines:", newLines);
+        }
 
       //});
 
@@ -321,7 +327,7 @@ const Borderline = ({ children, ...props }: any) => {
       window.removeEventListener("resize", calculateCorners);
       window.removeEventListener("scroll", calculateCorners);
     };
-  }, []);
+  }, [children]);
 
   const cornerRadius = 5;
 
@@ -365,6 +371,19 @@ const Borderline = ({ children, ...props }: any) => {
           />
         ))}
       </svg>
+      
+      {/* current  point location dot */}
+      <div
+        style={{
+          position: "absolute",
+          left: `calc(${currentPointLocation[0]}px - ${cornerRadius}px)`,
+          top: `calc(${currentPointLocation[1]}px - ${cornerRadius}px)`,
+          width: "calc(2 * " + cornerRadius + "px)",
+          height: "calc(2 * " + cornerRadius + "px)",
+          borderRadius: "50%",
+          backgroundColor: "blue",
+        }}
+      />
     </>
   );
 };
