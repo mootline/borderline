@@ -17,6 +17,13 @@ class Corners {
   }
 }
 
+interface CurvePath {
+  start: Point;
+  startControl: Point;
+  endControl: Point;
+  end: Point;
+}
+
 type Basis = {
   dx: number;
   dy: number;
@@ -258,13 +265,20 @@ const Borderline = ({ children, ...props }: any) => {
 
   const [corners, setCorners] = useState<Corners>({});
   const [lines, setLines] = useState<Array<Line>>([]);
+  const [midpoints, setMidpoints] = useState<Array<Point>>([]);
+  const [curveAnchorPoints, setCurveAnchorPoints] = useState<Point[]>([]);
+  const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
+  const [curvePath, setCurvePath] = useState<string>([]);
+  const pathRadius = 5;
+  const cornerRadius = 20;
+  const curveRadius = cornerRadius * (1 - 0.55342686); // approximate a circle with a cubic bezier curve
 
   const [currentPointLocation, setCurrentPointLocation] = useState<Point>({
     x: 0,
     y: 0,
   });
 
-  const manualPoints = [{ x: 244.88333129882812, y: 136.43333435058594 }];
+  const manualPoints = [];
 
   useLayoutEffect(() => {
     const calculateCorners = () => {
@@ -277,6 +291,7 @@ const Borderline = ({ children, ...props }: any) => {
         const allPointsSet = new SerializedSet();
         const visitedPointsSet = new SerializedSet();
 
+        let tempLines = [];
         // get all the points of the children
         Array.from(ref.current.children).map((child: Element) => {
           // get the bounding rectangle of the child
@@ -335,7 +350,7 @@ const Borderline = ({ children, ...props }: any) => {
         visitedPointsSet.add(nextPoint);
         let iterations = 0;
         let tempPoint = null;
-        const pathLines: Line[] = [startingLine];
+        tempLines.push(startingLine);
 
         console.log("creation time taken:", performance.now() - startTime);
 
@@ -358,7 +373,7 @@ const Borderline = ({ children, ...props }: any) => {
           setCurrentPointLocation(currentPoint);
           nextPoint = tempPoint;
 
-          pathLines.push({
+          tempLines.push({
             start: currentPoint,
             end: nextPoint,
           });
@@ -367,14 +382,153 @@ const Borderline = ({ children, ...props }: any) => {
 
           iterations++;
         }
-        setLines(pathLines);
+        setLines(tempLines);
+
+        // find the midpoints of the lines
+        const tempMidpoints = tempLines.map((line) => {
+          return {
+            x: (line.start.x + line.end.x) / 2,
+            y: (line.start.y + line.end.y) / 2,
+          };
+        });
+        setMidpoints(tempMidpoints);
+
+        // find the anchor points of each line's corner arcs
+        // each line has two midpoints, one on each side of the midpoint
+        // anchor points are either the midpoint themselves or {cornerRadius} away from the corner, whichever is closer
+        const tempAnchorPoints = [];
+        const tempControlPoints = [];
+        for (let i = 0; i < tempLines.length; i++) {
+          const line = tempLines[i];
+          const midpoint = tempMidpoints[i];
+
+          //tempAnchorPoints.push(midpoint);
+          //tempAnchorPoints.push(midpoint);
+
+          //const curveDistance = Math.sqrt(Math.pow(midpoint.x - line.start.x, 2) + Math.pow(midpoint.y - line.start.y, 2));
+
+          //const dx = midpoint.x - line.start.x;
+          //const dy = midpoint.y - line.start.y;
+
+          //const curveDistance = Math.sqrt((dx - .5) ** 2 + (dy - .5) ** 2);
+
+          //const startControlPoint = {
+          //  x: line.start.x + (curveRadius / curveDistance) * dx,
+          //  y: line.start.y + (curveRadius / curveDistance) * dy,
+          //};
+          //tempControlPoints.push(startControlPoint);
+          //const endControlPoint = {
+          //  x: line.end.x - (curveRadius / curveDistance) * dx,
+          //  y: line.end.y - (curveRadius / curveDistance) * dy,
+          //};
+          //tempControlPoints.push(endControlPoint);
+
+          const dx = midpoint.x - line.start.x;
+          const dy = midpoint.y - line.start.y;
+          //const distance = Math.sqrt(dx * dx + dy * dy);
+          const anchorDistance = Math.sqrt(dx ** 2 + dy ** 2);
+
+          //const curveDistance = Math.sqrt((dx - curveModifier) ** 2 + (dy - curveModifier) ** 2);
+          const curveDistance = anchorDistance;
+          const curveModifier = (cornerRadius / curveDistance) * 0.55342686;
+
+          if (anchorDistance < cornerRadius) {
+            tempAnchorPoints.push(midpoint);
+            tempAnchorPoints.push(midpoint);
+          } else {
+            // add anchor points that are {cornerRadius} away from the corner, in the direction of the midpoint
+            const anchorModifier = cornerRadius / anchorDistance;
+            const startAnchorPoint = {
+              x: line.start.x + anchorModifier * dx,
+              y: line.start.y + anchorModifier * dy,
+            };
+            tempAnchorPoints.push(startAnchorPoint);
+            const endAnchorPoint = {
+              x: line.end.x - anchorModifier * dx,
+              y: line.end.y - anchorModifier * dy,
+            };
+            tempAnchorPoints.push(endAnchorPoint);
+          }
+
+          // add control points that are {curveRadius} away from the corner, in the direction of the midpoint
+          //const startControlPoint = {
+          //  x: line.start.x + (curveRadius / anchorDistance) * dx,
+          //  y: line.start.y + (curveRadius / anchorDistance) * dy,
+          //};
+          //tempControlPoints.push(startControlPoint);
+          //const endControlPoint = {
+          //  x: line.end.x - (curveRadius / anchorDistance) * dx,
+          //  y: line.end.y - (curveRadius / anchorDistance) * dy,
+          //};
+          //tempControlPoints.push(endControlPoint);
+
+          // add control points between the anchor points and the midpoints that are {curveModifier} between the anchor points and the midpoints
+          if (curveDistance < curveRadius) {
+            tempControlPoints.push(midpoint);
+            tempControlPoints.push(midpoint);
+          } else {
+            const startControlPoint = {
+              x: line.start.x + curveModifier * dx,
+              y: line.start.y + curveModifier * dy,
+            };
+            tempControlPoints.push(startControlPoint);
+            const endControlPoint = {
+              x: line.end.x - curveModifier * dx,
+              y: line.end.y - curveModifier * dy,
+            };
+            tempControlPoints.push(endControlPoint);
+          }
+        }
+        let firstElement = tempAnchorPoints.shift();
+        tempAnchorPoints.push(firstElement);
+
+        firstElement = tempControlPoints.shift();
+        tempControlPoints.push(firstElement);
+
+        setCurveAnchorPoints(tempAnchorPoints);
+        setCurveControlPoints(tempControlPoints);
+
+        const tempCurvePath = [
+          // starting line
+          `M ${tempAnchorPoints[tempAnchorPoints.length - 1].x} ${tempAnchorPoints[tempAnchorPoints.length - 1].y}
+          L ${tempAnchorPoints[0].x} ${tempAnchorPoints[0].y}`,
+        ];
+        for (let i = 0; i < tempLines.length; i++) {
+          const currentCurvePath: CurvePath = {
+            start: tempAnchorPoints[2 * i],
+            startControl: tempControlPoints[2 * i],
+            endControl: tempControlPoints[2 * i + 1],
+            end: tempAnchorPoints[2 * i + 1],
+          };
+
+          if (
+            currentCurvePath.start.x === currentCurvePath.end.x &&
+            currentCurvePath.start.y === currentCurvePath.end.y
+          ) {
+            continue;
+          }
+
+          tempCurvePath.push(`
+        L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
+        C ${currentCurvePath.startControl.x} ${currentCurvePath.startControl.y},
+          ${currentCurvePath.endControl.x} ${currentCurvePath.endControl.y},
+          ${currentCurvePath.end.x} ${currentCurvePath.end.y}
+        `);
+        }
+        setCurvePath(tempCurvePath.join(" "));
+        console.log(
+          lines.length,
+          midpoints.length,
+          curveAnchorPoints.length,
+          curveControlPoints.length,
+        );
+
+        const endTime = performance.now();
+
+        console.log("Start time:", startTime);
+        console.log("End time:", endTime);
+        console.log("Time taken:", endTime - startTime);
       }
-
-      const endTime = performance.now();
-
-      console.log("Start time:", startTime);
-      console.log("End time:", endTime);
-      console.log("Time taken:", endTime - startTime);
     };
 
     calculateCorners();
@@ -399,27 +553,27 @@ const Borderline = ({ children, ...props }: any) => {
     };
   }, [children]);
 
-  const cornerRadius = 5;
-
   return (
     <>
       <div ref={ref} className="borderline" {...props}>
         {children}
       </div>
+      {/* corners 
       {Object.keys(corners).map((corner, index) => (
         <div
           key={index}
           style={{
             position: "absolute",
-            left: `calc(${corners[corner].x}px - ${cornerRadius}px)`,
-            top: `calc(${corners[corner].y}px - ${cornerRadius}px)`,
-            width: "calc(2 * " + cornerRadius + "px)",
-            height: "calc(2 * " + cornerRadius + "px)",
+            left: `calc(${corners[corner].x}px - ${pathRadius}px)`,
+            top: `calc(${corners[corner].y}px - ${pathRadius}px)`,
+            width: "calc(2 * " + pathRadius + "px)",
+            height: "calc(2 * " + pathRadius + "px)",
             borderRadius: "50%",
             backgroundColor: "red",
           }}
         />
       ))}
+       */}
       <svg
         style={{
           position: "absolute",
@@ -428,8 +582,10 @@ const Borderline = ({ children, ...props }: any) => {
           width: "100%",
           height: "100%",
           pointerEvents: "none",
+          strokeLinejoin: "bevel",
         }}
       >
+        {/* edge lines straight
         {lines.map((line, index) => (
           <path
             key={index}
@@ -440,36 +596,99 @@ const Borderline = ({ children, ...props }: any) => {
             fill="transparent"
           />
         ))}
+         */}
+
+        {curvePath && (
+          <path
+            d={curvePath}
+            stroke="blue"
+            strokeWidth={4}
+            fill="transparent"
+          />
+        )}
       </svg>
 
-      {/* current  point location dot */}
+      {/* current  point location dot
       <div
         style={{
           position: "absolute",
-          left: `calc(${currentPointLocation.x}px - ${cornerRadius}px)`,
-          top: `calc(${currentPointLocation.y}px - ${cornerRadius}px)`,
-          width: "calc(2 * " + cornerRadius + "px)",
-          height: "calc(2 * " + cornerRadius + "px)",
+          left: `calc(${currentPointLocation.x}px - ${pathRadius}px)`,
+          top: `calc(${currentPointLocation.y}px - ${pathRadius}px)`,
+          width: "calc(2 * " + pathRadius + "px)",
+          height: "calc(2 * " + pathRadius + "px)",
           borderRadius: "50%",
           backgroundColor: "blue",
         }}
       />
+       */}
 
-      {/* manual points location dot */}
+      {/* manual points location dot 
       {manualPoints.map((manualPoint, index) => (
         <div
           key={index}
           style={{
             position: "absolute",
-            left: `calc(${manualPoint.x}px - ${cornerRadius}px)`,
-            top: `calc(${manualPoint.y}px - ${cornerRadius}px)`,
-            width: "calc(2 * " + cornerRadius + "px)",
-            height: "calc(2 * " + cornerRadius + "px)",
+            left: `calc(${manualPoint.x}px - ${pathRadius}px)`,
+            top: `calc(${manualPoint.y}px - ${pathRadius}px)`,
+            width: "calc(2 * " + pathRadius + "px)",
+            height: "calc(2 * " + pathRadius + "px)",
             borderRadius: "50%",
             backgroundColor: "green",
           }}
         />
       ))}
+      */}
+
+      {/* midpoints location dot */}
+      {midpoints.map((midpoint, index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            left: `calc(${midpoint.x}px - ${pathRadius}px)`,
+            top: `calc(${midpoint.y}px - ${pathRadius}px)`,
+            width: "calc(2 * " + pathRadius + "px)",
+            height: "calc(2 * " + pathRadius + "px)",
+            borderRadius: "50%",
+            backgroundColor: "yellow",
+          }}
+        />
+      ))}
+      {/** */}
+
+      {/* anchor points location dot */}
+      {curveAnchorPoints.map((anchorPoint, index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            left: `calc(${anchorPoint.x}px - ${pathRadius}px)`,
+            top: `calc(${anchorPoint.y}px - ${pathRadius}px)`,
+            width: "calc(2 * " + pathRadius + "px)",
+            height: "calc(2 * " + pathRadius + "px)",
+            borderRadius: "50%",
+            backgroundColor: "green",
+          }}
+        />
+      ))}
+      {/** */}
+
+      {/* control points location dot */}
+      {curveControlPoints.map((controlPoint, index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            left: `calc(${controlPoint.x}px - ${pathRadius}px)`,
+            top: `calc(${controlPoint.y}px - ${pathRadius}px)`,
+            width: "calc(2 * " + pathRadius + "px)",
+            height: "calc(2 * " + pathRadius + "px)",
+            borderRadius: "50%",
+            backgroundColor: "purple",
+          }}
+        />
+      ))}
+      {/** */}
     </>
   );
 };
