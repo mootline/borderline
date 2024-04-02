@@ -78,31 +78,28 @@ function findCorners(xyPoints: MapSet, yxPoints: MapSet): Corners {
   // find the lowest y value (uppermost row)
   const minY = Math.min(...Array.from(yxPoints.keys()));
   // find the leftmost and rightmost points of the highest row
-  const minYPoints = yxPoints.get(minY);
-  console.log(minYPoints);
+  const maxYPoints = yxPoints.get(minY);
   corners.upperLeft = {
-    x: Math.min(...minYPoints),
+    x: Math.min(maxYPoints),
     y: minY,
   };
   corners.upperRight = {
-    x: Math.max(...minYPoints),
+    x: Math.max(maxYPoints),
     y: minY,
   };
   // find the highest y value (lowermost row)
   const maxY = Math.max(...Array.from(yxPoints.keys()));
 
   // find the leftmost and rightmost points at the lowest y value
-  const maxYPoints = yxPoints.get(maxY);
+  const minYPoints = xyPoints.get(maxY);
   corners.lowerLeft = {
-    x: Math.min(...maxYPoints),
+    x: Math.min(minYPoints),
     y: maxY,
   };
   corners.lowerRight = {
-    x: Math.max(...maxYPoints),
+    x: Math.max(minYPoints),
     y: maxY,
   };
-
-  console.log(corners);
 
   return corners;
 }
@@ -125,7 +122,7 @@ function findNextPoint(
 ) {
   const inputDirectionBasis = findDirectionBasis(previousPoint, currentPoint);
 
-  //console.log("Input direction basis:", inputDirectionBasis);
+  console.log("Input direction basis:", inputDirectionBasis);
 
   const inputDirectionIndex = clockwiseDirections.findIndex(
     (direction) =>
@@ -169,21 +166,33 @@ function findNextPoint(
       ? xyPointsMapSet // vertical, find different y values for the same x
       : yxPointsMapSet; // horizontal, find different x values for the same y
 
-    const potentialNextValues = nextValuesMapSet
-      .get(currentPoint[constantPointAxis])
-      .filter((cv: number) =>
+    let potentialNextValues = nextValuesMapSet.get(
+      currentPoint[constantPointAxis],
+    );
+
+    potentialNextValues = potentialNextValues.filter((cv: number) =>
+      currentDirectionValue > 0
+        ? // if the direction value is positive, we are moving right or down, so filter out values that are less than the constant point axis
+          cv > currentPoint[nextPointAxis]
+        : // if the direction value is negative, we are moving left or up so filter out values that are greater than the constant point axis
+          cv < currentPoint[nextPointAxis],
+    );
+
+    potentialNextValues = potentialNextValues.sort(
+      (a: number, b: number) =>
         currentDirectionValue > 0
-          ? // if the direction value is positive, we are moving right or down, so filter out values that are less than the constant point axis
-            cv > currentPoint[nextPointAxis]
-          : // if the direction value is negative, we are moving left or up so filter out values that are greater than the constant point axis
-            cv < currentPoint[nextPointAxis],
-      )
-      .sort(
-        (a: number, b: number) =>
-          currentDirectionValue > 0
-            ? a - b // if the direction value is positive, sort in ascending order
-            : b - a, // if the direction value is negative, sort in descending order
-      );
+          ? a - b // if the direction value is positive, sort in ascending order
+          : b - a, // if the direction value is negative, sort in descending order
+    );
+
+    console.log(
+      currentPoint,
+      currentDirection,
+      currentDirectionValue,
+      nextPointAxis,
+      constantPointAxis,
+      potentialNextValues,
+    );
 
     // if there are no potential next axis values, continue
     if (potentialNextValues.length == 0) {
@@ -198,7 +207,7 @@ function findNextPoint(
       ? { x: constantValue, y: nextValue }
       : { x: nextValue, y: constantValue };
 
-    //console.log(nextPoint)
+    console.log(nextPoint);
 
     // check to see if the next point is already visited
     if (visitedPointsSet.has(nextPoint)) {
@@ -213,24 +222,13 @@ function findNextPoint(
     
     */
 
-    //  if the direction is straight or left, check if the line actually exists
-    if (currentOffset === 0 || currentOffset === 3) {
-      const potentialLeadinPoints = linesMapSet
-        .get(nextPoint)
-        .filter((lp: Point) => {
-          const lpv = isCurrentDirectionVertical ? lp.y : lp.x;
-          const lip =
-            currentDirectionValue > 0
-              ? lpv < currentPoint[nextPointAxis]
-              : lpv > currentPoint[nextPointAxis];
-          return lip;
-        });
-
-      if (
-        !linesMapSet.has(currentPoint, nextPoint) &&
-        potentialLeadinPoints.length == 0
-      ) {
-        continue;
+    //  if the direction is straight, check if the line actually exists
+    if (currentOffset == 0) {
+      if (!linesMapSet.has(currentPoint, nextPoint)) {
+        console.log(linesMapSet.get(currentPoint), currentPoint, nextPoint);
+        //  { x: 40.633331298828125, y: 0.633331298828125 }
+        console.log(linesMapSet);
+        //continue;
       }
     }
 
@@ -264,7 +262,7 @@ const Borderline = ({ children, ...props }: any) => {
     y: 0,
   });
 
-  const manualPoints = [{ x: 244.88333129882812, y: 136.43333435058594 }];
+  const manualPoint = { x: 0, y: 0 };
 
   useLayoutEffect(() => {
     const calculateCorners = () => {
@@ -281,12 +279,12 @@ const Borderline = ({ children, ...props }: any) => {
         Array.from(ref.current.children).map((child: Element) => {
           // get the bounding rectangle of the child
           const rect = child.getBoundingClientRect();
-          const rectPoints: Point[] = [
-            { x: rect.left, y: rect.top },
-            { x: rect.right, y: rect.top },
-            { x: rect.right, y: rect.bottom },
-            { x: rect.left, y: rect.bottom },
-          ];
+          const rectPoints: Point[] = [];
+          for (const y of [rect.top, rect.bottom]) {
+            for (const x of [rect.left, rect.right]) {
+              rectPoints.push({ x: x, y: y });
+            }
+          }
 
           // add the points and lines of the rectangle to all the sets
           for (
@@ -299,12 +297,11 @@ const Borderline = ({ children, ...props }: any) => {
 
             allPointsSet.add(startPoint);
             linesMapSet.add(startPoint, endPoint);
-            linesMapSet.add(endPoint, startPoint);
-            //console.log(linesMapSet.keys())
+            console.log(linesMapSet.keys());
             xyPointsMapSet.add(startPoint.x, startPoint.y);
             yxPointsMapSet.add(startPoint.y, startPoint.x);
           }
-          //console.log("Rect points:", rectPoints);
+          console.log("Rect points:", rectPoints);
         });
 
         console.log("All points set:", allPointsSet);
@@ -326,10 +323,10 @@ const Borderline = ({ children, ...props }: any) => {
       */
 
         const startingLine = findStartingLine(yxPointsMapSet);
-        //console.log("Starting line:", startingLine);
+        console.log("Starting line:", startingLine);
         let currentPoint = startingLine.start;
         const startingPoint = currentPoint;
-        //console.log("Starting point:", startingPoint);
+        console.log("Starting point:", startingPoint);
         //visitedPointsSet.add(startingPoint);
         let nextPoint = startingLine.end;
         visitedPointsSet.add(nextPoint);
@@ -337,14 +334,12 @@ const Borderline = ({ children, ...props }: any) => {
         let tempPoint = null;
         const pathLines: Line[] = [startingLine];
 
-        console.log("creation time taken:", performance.now() - startTime);
-
         while (
           !(nextPoint.x == startingPoint.x && nextPoint.y == startingPoint.y) ||
           iterations === 0
-          //&& iterations < 2
+          //&& iterations < 13
         ) {
-          //console.log("Current point:", currentPoint);
+          console.log("Current point:", currentPoint);
           tempPoint = findNextPoint(
             currentPoint,
             nextPoint,
@@ -363,7 +358,7 @@ const Borderline = ({ children, ...props }: any) => {
             end: nextPoint,
           });
 
-          //console.log(nextPoint, startingPoint)
+          console.log(nextPoint, startingPoint);
 
           iterations++;
         }
@@ -411,8 +406,8 @@ const Borderline = ({ children, ...props }: any) => {
           key={index}
           style={{
             position: "absolute",
-            left: `calc(${corners[corner].x}px - ${cornerRadius}px)`,
-            top: `calc(${corners[corner].y}px - ${cornerRadius}px)`,
+            left: `calc(${corner[0]}px - ${cornerRadius}px)`,
+            top: `calc(${corner[1]}px - ${cornerRadius}px)`,
             width: "calc(2 * " + cornerRadius + "px)",
             height: "calc(2 * " + cornerRadius + "px)",
             borderRadius: "50%",
@@ -455,21 +450,18 @@ const Borderline = ({ children, ...props }: any) => {
         }}
       />
 
-      {/* manual points location dot */}
-      {manualPoints.map((manualPoint, index) => (
-        <div
-          key={index}
-          style={{
-            position: "absolute",
-            left: `calc(${manualPoint.x}px - ${cornerRadius}px)`,
-            top: `calc(${manualPoint.y}px - ${cornerRadius}px)`,
-            width: "calc(2 * " + cornerRadius + "px)",
-            height: "calc(2 * " + cornerRadius + "px)",
-            borderRadius: "50%",
-            backgroundColor: "green",
-          }}
-        />
-      ))}
+      {/* manual point location dot */}
+      <div
+        style={{
+          position: "absolute",
+          left: `calc(${manualPoint.x}px - ${cornerRadius}px)`,
+          top: `calc(${manualPoint.y}px - ${cornerRadius}px)`,
+          width: "calc(2 * " + cornerRadius + "px)",
+          height: "calc(2 * " + cornerRadius + "px)",
+          borderRadius: "50%",
+          backgroundColor: "green",
+        }}
+      />
     </>
   );
 };
