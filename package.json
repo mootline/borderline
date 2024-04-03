@@ -2,8 +2,9 @@
   "name": "borderline",
   "description": "A React component for drawing borders around groups of elements",
   "private": false,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
+  "main": "dist/index.js",
   "scripts": {
     "dev": "vite",
     "fmt": "prettier --write .",
@@ -11,15 +12,18 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mootline/borderline.git"
+  },
   "dependencies": {
-    "@types/lodash": "^4.17.0",
     "lodash": "^4.17.21",
     "react": "^18.2.0",
-    "react-arrow": "^2.2.1",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
+    "@types/lodash": "^4.17.0",
     "@types/react-dom": "^18.2.22",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@typescript-eslint/parser": "^7.2.0",

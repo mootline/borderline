@@ -20,13 +20,14 @@ function App() {
       <div className="h-[200px] w-[2000px] bg-slate-300"></div>
 
       <Borderline
+        className="my-20 mx-10"
         controlRatio={controlRatio} // 0-1
         cornerRadius={cornerRadius} // px
         pathRadius={pathRadius} // px
-        sharpTopRightCorner={true}
-        sharpTopLeftCorner={true}
-        sharpBottomLeftCorner={true}
-        sharpBottomRightCorner={true}
+        //sharpTopRightCorner={true}
+        //sharpTopLeftCorner={true}
+        //sharpBottomLeftCorner={true}
+        //sharpBottomRightCorner={true}
         
       >
         <div
