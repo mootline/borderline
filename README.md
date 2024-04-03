@@ -34,7 +34,7 @@ function App() {
         <div>Three</div>
       </Borderline>
     </>
-	);	
+  );	
 }
 ```
 
@@ -81,7 +81,7 @@ Another approach would be a hull algorithm, but they do not handle concavity wel
 - It generally kinda seems like overkill to create a traversal vectorspace and fire a whole pathfinding algorithm every frame that changes. Such is the price of beauty, I suppose.
 
 TODO:
-- [ ] Fix corners 
+- [ ] Fix corners to use the path corners instead of the element corners
 - [ ] Add tests
 - [ ] Add examples
 - [ ] Support overlapping divs
