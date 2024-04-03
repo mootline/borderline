@@ -26,7 +26,7 @@ export class MapSet {
   }
 
   keys() {
-    return Object.keys(this._data);
+    return Array.from(Object.keys(this._data)).map((key) => JSON.parse(key));
   }
   /*
   minKey() {

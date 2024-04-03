@@ -1,19 +1,58 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./borderline.css";
-import { debounce } from "lodash";
+import _ from "lodash";
 import { MapSet, SerializedSet, Point, Line } from "../utils";
 
-class Corners {
-  upperLeft: Point;
-  upperRight: Point;
-  lowerLeft: Point;
-  lowerRight: Point;
+interface iCorners {
+  topLeft?: Point;
+  topRight?: Point;
+  bottomLeft?: Point;
+  bottomRight?: Point;
+}
 
-  constructor() {
-    this.upperLeft = { x: Infinity, y: Infinity };
-    this.upperRight = { x: -Infinity, y: Infinity };
-    this.lowerLeft = { x: Infinity, y: -Infinity };
-    this.lowerRight = { x: -Infinity, y: -Infinity };
+class Corners {
+  topLeft: Point;
+  topRight: Point;
+  bottomLeft: Point;
+  bottomRight: Point;
+
+  constructor(data: iCorners = {
+    topLeft: { x: Infinity, y: Infinity },
+    topRight: { x: -Infinity, y: Infinity },
+    bottomLeft: { x: Infinity, y: -Infinity },
+    bottomRight: { x: -Infinity, y: -Infinity },
+  }) {
+    this.topLeft = data.topLeft || { x: Infinity, y: Infinity };
+    this.topRight = data.topRight || { x: -Infinity, y: Infinity };
+    this.bottomLeft = data.bottomLeft || { x: Infinity, y: -Infinity };
+    this.bottomRight = data.bottomRight || { x: -Infinity, y: -Infinity };
+    
+  }
+}
+
+interface iBounding {
+  top?: number;
+  right?: number;
+  left?: number;
+  bottom?: number;
+}
+
+class Bounding {
+  top: number;
+  right: number;
+  left: number;
+  bottom: number;
+
+  constructor(data : iBounding = {
+    top: -Infinity,
+    right: -Infinity,
+    left: Infinity,
+    bottom: Infinity,
+  }) {
+    this.top = data.top || -Infinity;
+    this.right = data.right || -Infinity;
+    this.left = data.left || Infinity;
+    this.bottom = data.bottom || Infinity;
   }
 }
 
@@ -48,76 +87,57 @@ const counterClockwiseDirections: Directions = [
 function findCorners(xyPoints: MapSet, yxPoints: MapSet): Corners {
   // find the point with the lowest y axis (use lowest x axis if multiple points have the same y axis) to get the upper left corner
 
-  const corners: Corners = new Corners();
-
-  // naive implementation
-  /*
-  points.values().forEach((point: Point) => {
-    if (
-      point.y < corners.upperLeft.y ||
-      (point.y === corners.upperLeft.y && point.x < corners.upperLeft.x)
-    ) {
-      corners.upperLeft = point;
-    }
-    if (
-      point.y < corners.upperRight.y ||
-      (point.y === corners.upperRight.y && point.x > corners.upperRight.x)
-    ) {
-      corners.upperRight = point;
-    }
-    if (
-      point.y > corners.lowerLeft.y ||
-      (point.y === corners.lowerLeft.y && point.x < corners.lowerLeft.x)
-    ) {
-      corners.lowerLeft = point;
-    }
-    if (
-      point.y > corners.lowerRight.y ||
-      (point.y === corners.lowerRight.y && point.x > corners.lowerRight.x)
-    ) {
-      corners.lowerRight = point;
-    }
-  });
-  */
-
-  // optimized implementation
+  const pathCorners: Corners = new Corners();
 
   // find the lowest y value (uppermost row)
-  const minY = Math.min(...Array.from(yxPoints.keys()));
+  const minY = Math.min(...yxPoints.keys());
   // find the leftmost and rightmost points of the highest row
   const minYPoints = yxPoints.get(minY);
-  console.log(minYPoints);
-  corners.upperLeft = {
+  pathCorners.topLeft = {
     x: Math.min(...minYPoints),
     y: minY,
   };
-  corners.upperRight = {
+  pathCorners.topRight = {
     x: Math.max(...minYPoints),
     y: minY,
   };
   // find the highest y value (lowermost row)
-  const maxY = Math.max(...Array.from(yxPoints.keys()));
+  const maxY = Math.max(...yxPoints.keys());
 
   // find the leftmost and rightmost points at the lowest y value
   const maxYPoints = yxPoints.get(maxY);
-  corners.lowerLeft = {
+  pathCorners.bottomLeft = {
     x: Math.min(...maxYPoints),
     y: maxY,
   };
-  corners.lowerRight = {
+  pathCorners.bottomRight = {
     x: Math.max(...maxYPoints),
     y: maxY,
   };
 
-  console.log(corners);
-
-  return corners;
+  return pathCorners;
 }
 
+function findBounding(xyPoints: MapSet, yxPoints: MapSet): Bounding {
+  return new Bounding({
+    top: Math.min(...yxPoints.keys()),
+    right: Math.max(...xyPoints.keys()),
+    left: Math.min(...xyPoints.keys()),
+    bottom: Math.max(...yxPoints.keys()),
+  });
+}
+
+// find the direction basis of the line
+// returns a normalized vector of the direction of the line
+// currently only does horizontal and vertical lines
 function findDirectionBasis(previousPoint: Point, currentPoint: Point): Basis {
+  const dx = currentPoint.x - previousPoint.x;
+  const dy = currentPoint.y - previousPoint.y;
+  const magnitude = Math.sqrt(dx * dx + dy * dy);
+
   return {
-    dx: Math.sign(currentPoint.x - previousPoint.x),
-    dy: Math.sign(currentPoint.y - previousPoint.y),
+    dx: dx / magnitude,
+    dy: dy / magnitude,
   };
 }
 
@@ -252,7 +272,7 @@ function findNextPoint(
 
 // special case for starting the line following algorithm
 function findStartingLine(yxPoints: MapSet): Line {
-  const minY = Math.min(...Array.from(yxPoints.keys()));
+  const minY = Math.min(...yxPoints.keys());
   const sortedMinYPoints = yxPoints.get(minY).sort((a, b) => a - b);
   return {
     start: { x: sortedMinYPoints[0], y: minY },
@@ -260,38 +280,80 @@ function findStartingLine(yxPoints: MapSet): Line {
   };
 }
 
-const Borderline = ({ children, ...props }: any) => {
+/**
+ * main component
+ */
+
+interface iBorderline {
+  children: React.ReactNode; 
+  pathRadius?: number;
+  cornerRadius?: number;
+  controlRatio?: number;
+  [key: string]: any;
+}
+
+const Borderline = ({
+  children,
+  pathRadius = 5,
+  cornerRadius = 20,
+  controlRatio = 0.55342686, // default approximates a circle with a cubic bezier curve
+  ...props
+}: iBorderline) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  const [corners, setCorners] = useState<Corners>({});
-  const [lines, setLines] = useState<Array<Line>>([]);
+if (cornerRadius <= 0) {
+  cornerRadius = 0.000001;
+}
+  
+  
+  // the corners of the drawn borderline
+  const [pathCorners, setPathCorners] = useState<Corners>(new Corners());
+  // the corners of the bounding rectangle
+  const [bounding, setBounding] = useState<Bounding>(new Bounding());
+  // the segments of the borderline
+  //const [lines, setLines] = useState<Array<Line>>([]);
+  // the midpoints of the segments
   const [midpoints, setMidpoints] = useState<Array<Point>>([]);
+  // the anchor points of the cubic bezier curves
   const [curveAnchorPoints, setCurveAnchorPoints] = useState<Point[]>([]);
+  // the control points of the cubic bezier curves
   const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
+  
+  const [skippedPoints, setSkippedPoints] = useState<Point[]>([]);
+
+  // the final borderline path
   const [curvePath, setCurvePath] = useState<string>([]);
-  const pathRadius = 5;
-  const cornerRadius = 20;
-  const curveRadius = cornerRadius * (1 - 0.55342686); // approximate a circle with a cubic bezier curve
 
-  const [currentPointLocation, setCurrentPointLocation] = useState<Point>({
-    x: 0,
-    y: 0,
-  });
+  //const [currentPointLocation, setCurrentPointLocation] = useState<Point>({
+  //  x: 0,
+  //  y: 0,
+  //});
 
-  const manualPoints = [];
+  //const manualPoints = [];
 
   useLayoutEffect(() => {
     const calculateCorners = () => {
-      const startTime = performance.now();
-
+      // if the ref exists
       if (ref.current) {
+        /**
+         * declarations
+         */
+
+        // index lines by both x and y coordinates
         const xyPointsMapSet = new MapSet();
         const yxPointsMapSet = new MapSet();
+
+        // index lines by both start and end points
         const linesMapSet = new MapSet();
-        const allPointsSet = new SerializedSet();
+
+        // keep track of the points that have been visited
         const visitedPointsSet = new SerializedSet();
 
-        let tempLines = [];
+        /**
+         * index lines by both x and y coordinates
+         */
+
+        const tempLines = [];
         // get all the points of the children
         Array.from(ref.current.children).map((child: Element) => {
           // get the bounding rectangle of the child
@@ -312,7 +374,7 @@ const Borderline = ({ children, ...props }: any) => {
             const startPoint = rectPoints[pointIndex];
             const endPoint = rectPoints[(pointIndex + 1) % rectPoints.length];
 
-            allPointsSet.add(startPoint);
+            //allPointsSet.add(startPoint);
             linesMapSet.add(startPoint, endPoint);
             linesMapSet.add(endPoint, startPoint);
             //console.log(linesMapSet.keys())
@@ -322,45 +384,44 @@ const Borderline = ({ children, ...props }: any) => {
           //console.log("Rect points:", rectPoints);
         });
 
-        console.log("All points set:", allPointsSet);
-        console.log("XY points map set:", xyPointsMapSet);
-        console.log("YX points map set:", yxPointsMapSet);
-        setCorners(findCorners(xyPointsMapSet, yxPointsMapSet));
-        console.log("Corners:", corners);
+        /**
+         * find the pathCorners of the border
+         */
+        setPathCorners(findCorners(xyPointsMapSet,yxPointsMapSet));
+        setBounding(findBounding(xyPointsMapSet, yxPointsMapSet));
+
         /*
-      
-      this function takes a line as two points of the form [previousPoint] ([x1, y1]) and currentPoint ([x2, y2]) and finds the nearest point in the clockwise direction
-      steps:
-      1. find the direction of the line as a vector normalized to [0, +/-1] or [+/-1, 0] (using findDirectionBasis function)
-      2. try to find the nearest point perpidicular to the left of the line (like as if you were turning left at the line)
-      3. find the nearest point perpidicular to the right of the line (like as if you were turning right at the line)
-      4. try to find the nearest colinear point (aka continuing  the line straight)
-      
-      
-      note: the xyPoints look up points like xyPoints(x) -> [y1,y2...] and xyPoints(y) -> [x1,x2...]
-      */
+        line following algorithm
+        
+        this function takes a line as two points of the form [previousPoint] ([x1, y1]) and currentPoint ([x2, y2]) and finds the nearest point in the clockwise direction
+        steps:
+        1. find the direction of the line as a vector normalized to [0, +/-1] or [+/-1, 0] (using findDirectionBasis function)
+        2. try to find the nearest point perpidicular to the left of the line (like as if you were turning left at the line)
+        3. find the nearest point perpidicular to the right of the line (like as if you were turning right at the line)
+        4. try to find the nearest colinear point (aka continuing  the line straight)
+        
+        
+        note: the xyPoints look up points like xyPoints(x) -> [y1,y2...] and xyPoints(y) -> [x1,x2...]
+        */
 
+        // special case for finding the first two points
         const startingLine = findStartingLine(yxPointsMapSet);
-        //console.log("Starting line:", startingLine);
+        const startingPoint = startingLine.start;
         let currentPoint = startingLine.start;
-        const startingPoint = currentPoint;
-        //console.log("Starting point:", startingPoint);
-        //visitedPointsSet.add(startingPoint);
         let nextPoint = startingLine.end;
-        visitedPointsSet.add(nextPoint);
-        let iterations = 0;
-        let tempPoint = null;
+
         tempLines.push(startingLine);
+        // leave the very first point unvisited to allow closing the loop
+        visitedPointsSet.add(nextPoint);
 
-        console.log("creation time taken:", performance.now() - startTime);
-
+        // find the next points until the starting point is reached
+        //let iterations = 0;
+        //const maxIterations = 1;
         while (
-          !(nextPoint.x == startingPoint.x && nextPoint.y == startingPoint.y) ||
-          iterations === 0
-          //&& iterations < 2
+          !(nextPoint.x == startingPoint.x && nextPoint.y == startingPoint.y)
+          //&& iterations < maxIterations
         ) {
-          //console.log("Current point:", currentPoint);
-          tempPoint = findNextPoint(
+          const tempPoint = findNextPoint(
             currentPoint,
             nextPoint,
             xyPointsMapSet,
@@ -370,19 +431,18 @@ const Borderline = ({ children, ...props }: any) => {
           );
           currentPoint = nextPoint;
           visitedPointsSet.add(currentPoint);
-          setCurrentPointLocation(currentPoint);
           nextPoint = tempPoint;
 
           tempLines.push({
             start: currentPoint,
             end: nextPoint,
           });
-
-          //console.log(nextPoint, startingPoint)
-
-          iterations++;
+          //iterations++;
         }
-        setLines(tempLines);
+
+        /**
+         * drawing the path
+         */
 
         // find the midpoints of the lines
         const tempMidpoints = tempLines.map((line) => {
@@ -396,88 +456,64 @@ const Borderline = ({ children, ...props }: any) => {
         // find the anchor points of each line's corner arcs
         // each line has two midpoints, one on each side of the midpoint
         // anchor points are either the midpoint themselves or {cornerRadius} away from the corner, whichever is closer
+
         const tempAnchorPoints = [];
-        const tempControlPoints = [];
+        const tempControlPoints = []; 
+        const tempSkippedPoints = [];
+
         for (let i = 0; i < tempLines.length; i++) {
           const line = tempLines[i];
           const midpoint = tempMidpoints[i];
 
-          //tempAnchorPoints.push(midpoint);
-          //tempAnchorPoints.push(midpoint);
-
-          //const curveDistance = Math.sqrt(Math.pow(midpoint.x - line.start.x, 2) + Math.pow(midpoint.y - line.start.y, 2));
-
-          //const dx = midpoint.x - line.start.x;
-          //const dy = midpoint.y - line.start.y;
-
-          //const curveDistance = Math.sqrt((dx - .5) ** 2 + (dy - .5) ** 2);
-
-          //const startControlPoint = {
-          //  x: line.start.x + (curveRadius / curveDistance) * dx,
-          //  y: line.start.y + (curveRadius / curveDistance) * dy,
-          //};
-          //tempControlPoints.push(startControlPoint);
-          //const endControlPoint = {
-          //  x: line.end.x - (curveRadius / curveDistance) * dx,
-          //  y: line.end.y - (curveRadius / curveDistance) * dy,
-          //};
-          //tempControlPoints.push(endControlPoint);
+          /**
+           * anchor points
+           */
 
           const dx = midpoint.x - line.start.x;
           const dy = midpoint.y - line.start.y;
-          //const distance = Math.sqrt(dx * dx + dy * dy);
-          const anchorDistance = Math.sqrt(dx ** 2 + dy ** 2);
+          const midpointDistance = Math.sqrt(dx ** 2 + dy ** 2); // distance between the midpoint and the corner
 
-          //const curveDistance = Math.sqrt((dx - curveModifier) ** 2 + (dy - curveModifier) ** 2);
-          const curveDistance = anchorDistance;
-          const curveModifier = (cornerRadius / curveDistance) * 0.55342686;
-
-          if (anchorDistance < cornerRadius) {
-            tempAnchorPoints.push(midpoint);
-            tempAnchorPoints.push(midpoint);
-          } else {
-            // add anchor points that are {cornerRadius} away from the corner, in the direction of the midpoint
-            const anchorModifier = cornerRadius / anchorDistance;
-            const startAnchorPoint = {
-              x: line.start.x + anchorModifier * dx,
-              y: line.start.y + anchorModifier * dy,
-            };
-            tempAnchorPoints.push(startAnchorPoint);
-            const endAnchorPoint = {
-              x: line.end.x - anchorModifier * dx,
-              y: line.end.y - anchorModifier * dy,
-            };
-            tempAnchorPoints.push(endAnchorPoint);
+          // skip if the line does not go anywhere
+          if (dx === 0 && dy === 0) {
+            continue;
+          }
+          
+          // skip if the midpoint distance is less than the corner radius
+          if (midpointDistance < cornerRadius) {
+            continue;
           }
 
-          // add control points that are {curveRadius} away from the corner, in the direction of the midpoint
-          //const startControlPoint = {
-          //  x: line.start.x + (curveRadius / anchorDistance) * dx,
-          //  y: line.start.y + (curveRadius / anchorDistance) * dy,
-          //};
-          //tempControlPoints.push(startControlPoint);
-          //const endControlPoint = {
-          //  x: line.end.x - (curveRadius / anchorDistance) * dx,
-          //  y: line.end.y - (curveRadius / anchorDistance) * dy,
-          //};
-          //tempControlPoints.push(endControlPoint);
+          // the anchor distance is the minimum of the distance between the midpoint and the corner and the corner radius
+         
+
+          // add anchor points that are {cornerRadius} away from the corner, in the direction of the midpoint
+          const anchorModifier = Math.min(cornerRadius, midpointDistance) / midpointDistance;
+          
+          const startAnchorPoint = {
+            x: line.start.x + anchorModifier * dx,
+            y: line.start.y + anchorModifier * dy,
+          };
+          tempAnchorPoints.push(startAnchorPoint);
+          const endAnchorPoint = {
+            x: line.end.x - anchorModifier * dx,
+            y: line.end.y - anchorModifier * dy,
+          };
+          tempAnchorPoints.push(endAnchorPoint);
 
           // add control points between the anchor points and the midpoints that are {curveModifier} between the anchor points and the midpoints
-          if (curveDistance < curveRadius) {
-            tempControlPoints.push(midpoint);
-            tempControlPoints.push(midpoint);
-          } else {
-            const startControlPoint = {
-              x: line.start.x + curveModifier * dx,
-              y: line.start.y + curveModifier * dy,
-            };
-            tempControlPoints.push(startControlPoint);
-            const endControlPoint = {
-              x: line.end.x - curveModifier * dx,
-              y: line.end.y - curveModifier * dy,
-            };
-            tempControlPoints.push(endControlPoint);
-          }
+
+          const curveModifier = anchorModifier * controlRatio;
+
+          const startControlPoint = {
+            x: line.start.x + curveModifier * dx,
+            y: line.start.y + curveModifier * dy,
+          };
+          tempControlPoints.push(startControlPoint);
+          const endControlPoint = {
+            x: line.end.x - curveModifier * dx,
+            y: line.end.y - curveModifier * dy,
+          };
+          tempControlPoints.push(endControlPoint);
         }
         let firstElement = tempAnchorPoints.shift();
         tempAnchorPoints.push(firstElement);
@@ -490,24 +526,68 @@ const Borderline = ({ children, ...props }: any) => {
 
         const tempCurvePath = [
           // starting line
-          `M ${tempAnchorPoints[tempAnchorPoints.length - 1].x} ${tempAnchorPoints[tempAnchorPoints.length - 1].y}
-          L ${tempAnchorPoints[0].x} ${tempAnchorPoints[0].y}`,
+          `M ${tempAnchorPoints[tempAnchorPoints.length - 1]!.x} 
+             ${tempAnchorPoints[tempAnchorPoints.length - 1]!.y}
+           L ${tempAnchorPoints[0]!.x} ${tempAnchorPoints[0]!.y}`,
         ];
-        for (let i = 0; i < tempLines.length; i++) {
+        for (let i = 0; i < Math.round(tempAnchorPoints.length /2 ); i++) {
           const currentCurvePath: CurvePath = {
             start: tempAnchorPoints[2 * i],
             startControl: tempControlPoints[2 * i],
             endControl: tempControlPoints[2 * i + 1],
             end: tempAnchorPoints[2 * i + 1],
           };
-
+          
+          // skip if the path does not go anywhere
           if (
             currentCurvePath.start.x === currentCurvePath.end.x &&
             currentCurvePath.start.y === currentCurvePath.end.y
           ) {
             continue;
           }
-
+          
+          console.log(currentCurvePath);
+          
+          
+          
+          //if the line including the start and start control paths does not intesept the line including the end and end control paths, the point is skippedq
+          
+          const dStart = findDirectionBasis(currentCurvePath.start, currentCurvePath.startControl);
+          const dEnd = findDirectionBasis(currentCurvePath.end, currentCurvePath.endControl);
+          const sdx = Math.sign(dStart.dx) === Math.sign(dEnd.dx);
+          const sdy = Math.sign(dStart.dy) === Math.sign(dEnd.dy);
+          
+          if (sdx != sdy) { 
+          
+          const ddx = Math.abs(currentCurvePath.start.x - currentCurvePath.end.x)
+          
+          const ddy = Math.abs(currentCurvePath.start.y - currentCurvePath.end.y) 
+          
+          console.log(dStart, dEnd);
+                    
+          const newStartControl = {
+            x: currentCurvePath.start.x + dStart.dx * controlRatio * ddx,
+            y: currentCurvePath.start.y + dStart.dy * controlRatio * ddy,
+          };
+          
+          const newEndControl = {
+            x: currentCurvePath.end.x - dEnd.dx * controlRatio * ddx,
+            y: currentCurvePath.end.y - dEnd.dy * controlRatio * ddy,
+          };
+            
+            tempCurvePath.push(`
+        L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
+        
+        C ${newStartControl.x} ${newStartControl.y},
+          ${newEndControl.x} ${newEndControl.y},
+          ${currentCurvePath.end.x} ${currentCurvePath.end.y}
+        `);
+        //C ${newStartControl.x} ${newStartControl.y},
+        //${newEndControl.x} ${newEndControl.y},
+        //${currentCurvePath.end.x} ${currentCurvePath.end.y}
+           
+          //otherwise, it is a corner
+          }else{
           tempCurvePath.push(`
         L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
         C ${currentCurvePath.startControl.x} ${currentCurvePath.startControl.y},
@@ -515,23 +595,25 @@ const Borderline = ({ children, ...props }: any) => {
           ${currentCurvePath.end.x} ${currentCurvePath.end.y}
         `);
         }
+        }
+        setSkippedPoints(tempSkippedPoints);
         setCurvePath(tempCurvePath.join(" "));
-        console.log(
-          lines.length,
-          midpoints.length,
-          curveAnchorPoints.length,
-          curveControlPoints.length,
-        );
-
-        const endTime = performance.now();
-
-        console.log("Start time:", startTime);
-        console.log("End time:", endTime);
-        console.log("Time taken:", endTime - startTime);
+        //console.log(
+        //  tempLines.length,
+        //  midpoints.length,
+        //  curveAnchorPoints.length,
+        //  curveControlPoints.length,
+        //);
       }
     };
 
+    const startTime = performance.now();
     calculateCorners();
+
+    const endTime = performance.now();
+    console.log("Start time:", startTime);
+    console.log("End time:", endTime);
+    console.log("Time taken:", endTime - startTime);
 
     window.addEventListener("resize", calculateCorners);
     window.addEventListener("scroll", calculateCorners);
@@ -558,14 +640,14 @@ const Borderline = ({ children, ...props }: any) => {
       <div ref={ref} className="borderline" {...props}>
         {children}
       </div>
-      {/* corners 
-      {Object.keys(corners).map((corner, index) => (
+      {/* pathCorners 
+      {Object.keys(pathCorners).map((corner, index) => (
         <div
           key={index}
           style={{
             position: "absolute",
-            left: `calc(${corners[corner].x}px - ${pathRadius}px)`,
-            top: `calc(${corners[corner].y}px - ${pathRadius}px)`,
+            left: `calc(${pathCorners[corner].x}px - ${pathRadius}px)`,
+            top: `calc(${pathCorners[corner].y}px - ${pathRadius}px)`,
             width: "calc(2 * " + pathRadius + "px)",
             height: "calc(2 * " + pathRadius + "px)",
             borderRadius: "50%",
@@ -583,6 +665,7 @@ const Borderline = ({ children, ...props }: any) => {
           height: "100%",
           pointerEvents: "none",
           strokeLinejoin: "bevel",
+          
         }}
       >
         {/* edge lines straight
@@ -603,6 +686,7 @@ const Borderline = ({ children, ...props }: any) => {
             d={curvePath}
             stroke="blue"
             strokeWidth={4}
+            //fill="lightblue"
             fill="transparent"
           />
         )}
@@ -639,7 +723,7 @@ const Borderline = ({ children, ...props }: any) => {
       ))}
       */}
 
-      {/* midpoints location dot */}
+      {/* midpoints location dot * /}
       {midpoints.map((midpoint, index) => (
         <div
           key={index}
@@ -681,6 +765,23 @@ const Borderline = ({ children, ...props }: any) => {
             position: "absolute",
             left: `calc(${controlPoint.x}px - ${pathRadius}px)`,
             top: `calc(${controlPoint.y}px - ${pathRadius}px)`,
+            width: "calc(2 * " + pathRadius + "px)",
+            height: "calc(2 * " + pathRadius + "px)",
+            borderRadius: "50%",
+            backgroundColor: "purple",
+          }}
+        />
+      ))}
+      {/** */}
+      
+      {/* skipped points location dot */}
+      {skippedPoints.map((skippedPoint, index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            left: `calc(${skippedPoint.x}px - ${pathRadius}px)`,
+            top: `calc(${skippedPoint.y}px - ${pathRadius}px)`,
             width: "calc(2 * " + pathRadius + "px)",
             height: "calc(2 * " + pathRadius + "px)",
             borderRadius: "50%",

@@ -9,10 +9,19 @@ function App() {
   const [marginLeftOne, setMarginLeftOne] = useState(10);
   const [marginLeftTwo, setMarginLeftTwo] = useState(100);
   const [marginLeftThree, setMarginLeftThree] = useState(40);
+  
+ // New state variables for Borderline properties
+ const [controlRatio, setControlRatio] = useState(0.55342686);
+ const [cornerRadius, setCornerRadius] = useState(10);
+ const [pathRadius, setPathRadius] = useState(4);
 
-  return (
-    <>
-      <Borderline>
+ return (
+   <>
+     <Borderline
+       controlRatio={controlRatio} // 0-1
+       cornerRadius={cornerRadius} // px
+       pathRadius={pathRadius} // px
+     >
         <div
           className="demo-component"
           style={{
@@ -46,22 +55,28 @@ function App() {
       </Borderline>
 
       {[
-        ["widthOne", widthOne, setWidthOne],
-        ["widthTwo", widthTwo, setWidthTwo],
-        ["widthThree", widthThree, setWidthThree],
-        ["marginLeftOne", marginLeftOne, setMarginLeftOne],
-        ["marginLeftTwo", marginLeftTwo, setMarginLeftTwo],
-        ["marginLeftThree", marginLeftThree, setMarginLeftThree],
-      ].map(([name, value, setter]) => (
+        ["widthOne", widthOne, setWidthOne, 0, 100],
+        ["widthTwo", widthTwo, setWidthTwo, 0, 100],
+        ["widthThree", widthThree, setWidthThree, 0, 100],
+        ["marginLeftOne", marginLeftOne, setMarginLeftOne, 0, 100],
+        ["marginLeftTwo", marginLeftTwo, setMarginLeftTwo, 0, 100],
+        ["marginLeftThree", marginLeftThree, setMarginLeftThree, 0, 100],
+        ["controlRatio", controlRatio, setControlRatio, 0, 1],
+        ["cornerRadius", cornerRadius, setCornerRadius, 0, 100],
+        ["pathRadius", pathRadius, setPathRadius, 0, 100],
+   
+      ].map(([name, value, setter,min,max]) => (
         <div key={name}>
           {name}
           <input
             type="range"
-            min="0"
-            max="100"
+            min={min}
+            max={max}
             value={value}
-            onChange={(e) => setter(parseInt(e.target.value))}
+            step={(max - min) / 100}
+            onChange={(e) => setter(e.target.value)}
           />
+          {value}
         </div>
       ))}
       <div className="h-[2000px] w-[2000px] bg-slate-300"></div>
