@@ -9,19 +9,19 @@ function App() {
   const [marginLeftOne, setMarginLeftOne] = useState(10);
   const [marginLeftTwo, setMarginLeftTwo] = useState(100);
   const [marginLeftThree, setMarginLeftThree] = useState(40);
-  
- // New state variables for Borderline properties
- const [controlRatio, setControlRatio] = useState(0.55342686);
- const [cornerRadius, setCornerRadius] = useState(10);
- const [pathRadius, setPathRadius] = useState(4);
 
- return (
-   <>
-     <Borderline
-       controlRatio={controlRatio} // 0-1
-       cornerRadius={cornerRadius} // px
-       pathRadius={pathRadius} // px
-     >
+  // New state variables for Borderline properties
+  const [controlRatio, setControlRatio] = useState(0.55342686);
+  const [cornerRadius, setCornerRadius] = useState(10);
+  const [pathRadius, setPathRadius] = useState(2);
+
+  return (
+    <>
+      <Borderline
+        controlRatio={controlRatio} // 0-1
+        cornerRadius={cornerRadius} // px
+        pathRadius={pathRadius} // px
+      >
         <div
           className="demo-component"
           style={{
@@ -64,8 +64,7 @@ function App() {
         ["controlRatio", controlRatio, setControlRatio, 0, 1],
         ["cornerRadius", cornerRadius, setCornerRadius, 0, 100],
         ["pathRadius", pathRadius, setPathRadius, 0, 100],
-   
-      ].map(([name, value, setter,min,max]) => (
+      ].map(([name, value, setter, min, max]) => (
         <div key={name}>
           {name}
           <input

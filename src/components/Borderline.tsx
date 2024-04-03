@@ -15,18 +15,26 @@ class Corners {
   topRight: Point;
   bottomLeft: Point;
   bottomRight: Point;
+  cornerSet: SerializedSet<Point>;
 
-  constructor(data: iCorners = {
-    topLeft: { x: Infinity, y: Infinity },
-    topRight: { x: -Infinity, y: Infinity },
-    bottomLeft: { x: Infinity, y: -Infinity },
-    bottomRight: { x: -Infinity, y: -Infinity },
-  }) {
+  constructor(
+    data: iCorners = {
+      topLeft: { x: Infinity, y: Infinity },
+      topRight: { x: -Infinity, y: Infinity },
+      bottomLeft: { x: Infinity, y: -Infinity },
+      bottomRight: { x: -Infinity, y: -Infinity },
+    },
+  ) {
     this.topLeft = data.topLeft || { x: Infinity, y: Infinity };
     this.topRight = data.topRight || { x: -Infinity, y: Infinity };
     this.bottomLeft = data.bottomLeft || { x: Infinity, y: -Infinity };
     this.bottomRight = data.bottomRight || { x: -Infinity, y: -Infinity };
-    
+    this.cornerSet = new SerializedSet([
+      this.topLeft,
+      this.topRight,
+      this.bottomLeft,
+      this.bottomRight,
+    ]);
   }
 }
 
@@ -43,12 +51,14 @@ class Bounding {
   left: number;
   bottom: number;
 
-  constructor(data : iBounding = {
-    top: -Infinity,
-    right: -Infinity,
-    left: Infinity,
-    bottom: Infinity,
-  }) {
+  constructor(
+    data: iBounding = {
+      top: -Infinity,
+      right: -Infinity,
+      left: Infinity,
+      bottom: Infinity,
+    },
+  ) {
     this.top = data.top || -Infinity;
     this.right = data.right || -Infinity;
     this.left = data.left || Infinity;
@@ -59,6 +69,7 @@ class Bounding {
 interface CurvePath {
   start: Point;
   startControl: Point;
+  corner: Point;
   endControl: Point;
   end: Point;
 }
@@ -114,6 +125,13 @@ function findCorners(xyPoints: MapSet, yxPoints: MapSet): Corners {
     x: Math.max(...maxYPoints),
     y: maxY,
   };
+
+  pathCorners.cornerSet = new SerializedSet([
+    pathCorners.topLeft,
+    pathCorners.topRight,
+    pathCorners.bottomLeft,
+    pathCorners.bottomRight,
+  ]);
 
   return pathCorners;
 }
@@ -285,27 +303,36 @@ function findStartingLine(yxPoints: MapSet): Line {
  */
 
 interface iBorderline {
-  children: React.ReactNode; 
+  children: React.ReactNode;
   pathRadius?: number;
   cornerRadius?: number;
   controlRatio?: number;
+  sharpTopLeftCorner?: boolean;
+  sharpTopRightCorner?: boolean;
+  sharpBottomLeftCorner?: boolean;
+  sharpBottomRightCorner?: boolean;
+  skipSmallLedges?: boolean;
   [key: string]: any;
 }
 
 const Borderline = ({
   children,
-  pathRadius = 5,
+  pathRadius = 2,
   cornerRadius = 20,
   controlRatio = 0.55342686, // default approximates a circle with a cubic bezier curve
+  sharpTopLeftCorner = true,
+  sharpTopRightCorner = true,
+  sharpBottomLeftCorner = true,
+  sharpBottomRightCorner = true,
+  skipSmallLedges = false,
   ...props
 }: iBorderline) => {
   const ref = useRef<HTMLDivElement>(null);
 
-if (cornerRadius <= 0) {
-  cornerRadius = 0.000001;
-}
-  
-  
+  if (cornerRadius <= 0) {
+    cornerRadius = 0.000001;
+  }
+
   // the corners of the drawn borderline
   const [pathCorners, setPathCorners] = useState<Corners>(new Corners());
   // the corners of the bounding rectangle
@@ -318,7 +345,7 @@ if (cornerRadius <= 0) {
   const [curveAnchorPoints, setCurveAnchorPoints] = useState<Point[]>([]);
   // the control points of the cubic bezier curves
   const [curveControlPoints, setCurveControlPoints] = useState<Point[]>([]);
-  
+
   const [skippedPoints, setSkippedPoints] = useState<Point[]>([]);
 
   // the final borderline path
@@ -387,7 +414,7 @@ if (cornerRadius <= 0) {
         /**
          * find the pathCorners of the border
          */
-        setPathCorners(findCorners(xyPointsMapSet,yxPointsMapSet));
+        setPathCorners(findCorners(xyPointsMapSet, yxPointsMapSet));
         setBounding(findBounding(xyPointsMapSet, yxPointsMapSet));
 
         /*
@@ -458,7 +485,7 @@ if (cornerRadius <= 0) {
         // anchor points are either the midpoint themselves or {cornerRadius} away from the corner, whichever is closer
 
         const tempAnchorPoints = [];
-        const tempControlPoints = []; 
+        const tempControlPoints = [];
         const tempSkippedPoints = [];
 
         for (let i = 0; i < tempLines.length; i++) {
@@ -477,18 +504,18 @@ if (cornerRadius <= 0) {
           if (dx === 0 && dy === 0) {
             continue;
           }
-          
-          // skip if the midpoint distance is less than the corner radius
-          if (midpointDistance < cornerRadius) {
+
+          // skip if the midpoint distance is less than the corner radius and skipSmallLedges is true
+          if (midpointDistance < cornerRadius && skipSmallLedges) {
             continue;
           }
 
           // the anchor distance is the minimum of the distance between the midpoint and the corner and the corner radius
-         
 
           // add anchor points that are {cornerRadius} away from the corner, in the direction of the midpoint
-          const anchorModifier = Math.min(cornerRadius, midpointDistance) / midpointDistance;
-          
+          const anchorModifier =
+            Math.min(cornerRadius, midpointDistance) / midpointDistance;
+
           const startAnchorPoint = {
             x: line.start.x + anchorModifier * dx,
             y: line.start.y + anchorModifier * dy,
@@ -530,14 +557,16 @@ if (cornerRadius <= 0) {
              ${tempAnchorPoints[tempAnchorPoints.length - 1]!.y}
            L ${tempAnchorPoints[0]!.x} ${tempAnchorPoints[0]!.y}`,
         ];
-        for (let i = 0; i < Math.round(tempAnchorPoints.length /2 ); i++) {
+        let visitedCornerCount = 0;
+        for (let i = 0; i < Math.round(tempAnchorPoints.length / 2); i++) {
           const currentCurvePath: CurvePath = {
             start: tempAnchorPoints[2 * i],
             startControl: tempControlPoints[2 * i],
+            corner: tempLines[i].end,
             endControl: tempControlPoints[2 * i + 1],
             end: tempAnchorPoints[2 * i + 1],
           };
-          
+
           // skip if the path does not go anywhere
           if (
             currentCurvePath.start.x === currentCurvePath.end.x &&
@@ -545,36 +574,66 @@ if (cornerRadius <= 0) {
           ) {
             continue;
           }
-          
-          console.log(currentCurvePath);
-          
-          
-          
+
+          // handle sharp corners
+          if (pathCorners.cornerSet.has(currentCurvePath.corner)) {
+            if (
+              [
+                sharpTopLeftCorner,
+                sharpTopRightCorner,
+                sharpBottomLeftCorner,
+                sharpBottomRightCorner,
+              ][visitedCornerCount]
+            ) {
+              tempCurvePath.push(`
+              L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
+              L ${currentCurvePath.corner.x} ${currentCurvePath.corner.y} 
+              L ${currentCurvePath.end.x} ${currentCurvePath.end.y}
+              `);
+
+              visitedCornerCount++;
+              continue;
+            }
+            visitedCornerCount++;
+          }
+
           //if the line including the start and start control paths does not intesept the line including the end and end control paths, the point is skippedq
-          
-          const dStart = findDirectionBasis(currentCurvePath.start, currentCurvePath.startControl);
-          const dEnd = findDirectionBasis(currentCurvePath.end, currentCurvePath.endControl);
+
+          const dStart = findDirectionBasis(
+            currentCurvePath.start,
+            currentCurvePath.startControl,
+          );
+          const dEnd = findDirectionBasis(
+            currentCurvePath.end,
+            currentCurvePath.endControl,
+          );
           const sdx = Math.sign(dStart.dx) === Math.sign(dEnd.dx);
           const sdy = Math.sign(dStart.dy) === Math.sign(dEnd.dy);
-          
-          if (sdx != sdy) { 
-          
-          const ddx = Math.abs(currentCurvePath.start.x - currentCurvePath.end.x)
-          
-          const ddy = Math.abs(currentCurvePath.start.y - currentCurvePath.end.y) 
-          
-          console.log(dStart, dEnd);
-                    
-          const newStartControl = {
-            x: currentCurvePath.start.x + dStart.dx * controlRatio * ddx,
-            y: currentCurvePath.start.y + dStart.dy * controlRatio * ddy,
-          };
-          
-          const newEndControl = {
-            x: currentCurvePath.end.x - dEnd.dx * controlRatio * ddx,
-            y: currentCurvePath.end.y - dEnd.dy * controlRatio * ddy,
-          };
-            
+
+          if (sdx != sdy && skipSmallLedges) {
+            const ddx = Math.abs(
+              currentCurvePath.start.x - currentCurvePath.end.x,
+            );
+
+            const ddy = Math.abs(
+              currentCurvePath.start.y - currentCurvePath.end.y,
+            );
+
+            //console.log(dStart, dEnd);
+
+            const newStartControl = {
+              x: currentCurvePath.start.x + dStart.dx * ddx * controlRatio,
+              y: currentCurvePath.start.y + dStart.dy * ddy * controlRatio,
+            };
+
+            const newEndControl = {
+              x: currentCurvePath.end.x + dEnd.dx * ddx * controlRatio,
+              y: currentCurvePath.end.y + dEnd.dy * ddy * controlRatio,
+            };
+
+            tempSkippedPoints.push(newStartControl);
+            tempSkippedPoints.push(newEndControl);
+
             tempCurvePath.push(`
         L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
         
@@ -582,19 +641,16 @@ if (cornerRadius <= 0) {
           ${newEndControl.x} ${newEndControl.y},
           ${currentCurvePath.end.x} ${currentCurvePath.end.y}
         `);
-        //C ${newStartControl.x} ${newStartControl.y},
-        //${newEndControl.x} ${newEndControl.y},
-        //${currentCurvePath.end.x} ${currentCurvePath.end.y}
-           
-          //otherwise, it is a corner
-          }else{
-          tempCurvePath.push(`
+
+            //otherwise, it is a corner
+          } else {
+            tempCurvePath.push(`
         L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
         C ${currentCurvePath.startControl.x} ${currentCurvePath.startControl.y},
           ${currentCurvePath.endControl.x} ${currentCurvePath.endControl.y},
           ${currentCurvePath.end.x} ${currentCurvePath.end.y}
         `);
-        }
+          }
         }
         setSkippedPoints(tempSkippedPoints);
         setCurvePath(tempCurvePath.join(" "));
@@ -665,7 +721,6 @@ if (cornerRadius <= 0) {
           height: "100%",
           pointerEvents: "none",
           strokeLinejoin: "bevel",
-          
         }}
       >
         {/* edge lines straight
@@ -685,7 +740,7 @@ if (cornerRadius <= 0) {
           <path
             d={curvePath}
             stroke="blue"
-            strokeWidth={4}
+            strokeWidth={pathRadius * 2}
             //fill="lightblue"
             fill="transparent"
           />
@@ -740,7 +795,7 @@ if (cornerRadius <= 0) {
       ))}
       {/** */}
 
-      {/* anchor points location dot */}
+      {/* anchor points location dot * /}
       {curveAnchorPoints.map((anchorPoint, index) => (
         <div
           key={index}
@@ -757,7 +812,7 @@ if (cornerRadius <= 0) {
       ))}
       {/** */}
 
-      {/* control points location dot */}
+      {/* control points location dot * /}
       {curveControlPoints.map((controlPoint, index) => (
         <div
           key={index}
@@ -773,7 +828,7 @@ if (cornerRadius <= 0) {
         />
       ))}
       {/** */}
-      
+
       {/* skipped points location dot */}
       {skippedPoints.map((skippedPoint, index) => (
         <div
@@ -785,7 +840,7 @@ if (cornerRadius <= 0) {
             width: "calc(2 * " + pathRadius + "px)",
             height: "calc(2 * " + pathRadius + "px)",
             borderRadius: "50%",
-            backgroundColor: "purple",
+            backgroundColor: "orange",
           }}
         />
       ))}

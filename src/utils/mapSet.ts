@@ -53,7 +53,7 @@ export class MapSet {
 export class SerializedSet {
   private _data: Set<any>;
 
-  constructor(data?: Set<any>) {
+  constructor(data?: any) {
     this._data =
       new Set(Array.from(data || []).map((value) => JSON.stringify(value))) ||
       new Set();
