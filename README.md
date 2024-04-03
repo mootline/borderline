@@ -5,12 +5,16 @@
 ## A React component for drawing borders around groups of elements
 
 Inverted corners are hard. Have you ever wanted to do this?
+
 ![Three uneven divs with a border around them](public/images/simple-three-divs.png)
+
 Good Luck! 😅
 
 Until now... Check this out:
+
 ![Three uneven divs with a border around them, animated gif](public/gifs/simple-three-divs.gif)
 
+😎
 
 ## Installation
 ```bash
@@ -22,14 +26,14 @@ npm install borderline
 import Borderline from 'borderline';
 
 function App() {
-	return (
-		<>
-			<Borderline>
-				<div>One</div>
-				<div>Two</div>
-				<div>Three</div>
-			</Borderline>
-		</>
+  return (
+    <>
+      <Borderline>
+        <div>One</div>
+        <div>Two</div>
+        <div>Three</div>
+      </Borderline>
+    </>
 	);	
 }
 ```
@@ -41,7 +45,7 @@ function App() {
 | pathStroke | string | "black" | The color of the borderline |
 | pathFill | string | "transparent" | The color of the fill of the borderline shape |
 | cornerRadius | number | 20 | The radius of the corners of the elements |
-| controlRatio | number | 0.55342686 | The ratio of the control points for the bezier curves |
+| controlRatio | number | 0.551915 | The ratio of the control points for the bezier curves. The default point approximates a circle. |
 | sharpTopLeftCorner | boolean | false | Make the top left corner sharp |
 | sharpTopRightCorner | boolean | false | Make the top right corner sharp |
 | sharpBottomLeftCorner | boolean | false | Make the bottom left corner sharp |
