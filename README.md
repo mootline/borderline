@@ -6,6 +6,7 @@
 
 TODO:
 
+- [ ] Fix corners 
 - [ ] Add tests
 - [ ] Add examples
 - [ ] Multiple borders for disconnected groups within the same element

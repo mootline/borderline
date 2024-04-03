@@ -17,10 +17,17 @@ function App() {
 
   return (
     <>
+      <div className="h-[200px] w-[2000px] bg-slate-300"></div>
+
       <Borderline
         controlRatio={controlRatio} // 0-1
         cornerRadius={cornerRadius} // px
         pathRadius={pathRadius} // px
+        sharpTopRightCorner={true}
+        sharpTopLeftCorner={true}
+        sharpBottomLeftCorner={true}
+        sharpBottomRightCorner={true}
+        
       >
         <div
           className="demo-component"
@@ -46,21 +53,15 @@ function App() {
         >
           Three
         </div>
-        <div
-          className="demo-component"
-          style={{ width: `${widthTwo}%`, marginLeft: `${marginLeftTwo}px` }}
-        >
-          Two
-        </div>
       </Borderline>
 
       {[
-        ["widthOne", widthOne, setWidthOne, 0, 100],
-        ["widthTwo", widthTwo, setWidthTwo, 0, 100],
-        ["widthThree", widthThree, setWidthThree, 0, 100],
-        ["marginLeftOne", marginLeftOne, setMarginLeftOne, 0, 100],
-        ["marginLeftTwo", marginLeftTwo, setMarginLeftTwo, 0, 100],
-        ["marginLeftThree", marginLeftThree, setMarginLeftThree, 0, 100],
+        ["widthOne", widthOne, setWidthOne, 0, 20],
+        ["widthTwo", widthTwo, setWidthTwo, 0, 20],
+        ["widthThree", widthThree, setWidthThree, 0, 20],
+        ["marginLeftOne", marginLeftOne, setMarginLeftOne, 0, 300],
+        ["marginLeftTwo", marginLeftTwo, setMarginLeftTwo, 0, 300],
+        ["marginLeftThree", marginLeftThree, setMarginLeftThree, 0, 300],
         ["controlRatio", controlRatio, setControlRatio, 0, 1],
         ["cornerRadius", cornerRadius, setCornerRadius, 0, 100],
         ["pathRadius", pathRadius, setPathRadius, 0, 100],

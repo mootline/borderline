@@ -305,6 +305,8 @@ function findStartingLine(yxPoints: MapSet): Line {
 interface iBorderline {
   children: React.ReactNode;
   pathRadius?: number;
+  pathStroke?: string;
+  pathFill?: string;
   cornerRadius?: number;
   controlRatio?: number;
   sharpTopLeftCorner?: boolean;
@@ -318,13 +320,16 @@ interface iBorderline {
 const Borderline = ({
   children,
   pathRadius = 2,
+  pathStroke = "black",
+  pathFill = "transparent",
   cornerRadius = 20,
   controlRatio = 0.55342686, // default approximates a circle with a cubic bezier curve
-  sharpTopLeftCorner = true,
-  sharpTopRightCorner = true,
-  sharpBottomLeftCorner = true,
-  sharpBottomRightCorner = true,
+  sharpTopLeftCorner = false,
+  sharpTopRightCorner = false,
+  sharpBottomLeftCorner = false,
+  sharpBottomRightCorner = false,
   skipSmallLedges = false,
+  roundedPoints = true, // round the points to the nearest integer, might only be necessary if scrolling
   ...props
 }: iBorderline) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -385,12 +390,41 @@ const Borderline = ({
         Array.from(ref.current.children).map((child: Element) => {
           // get the bounding rectangle of the child
           const rect = child.getBoundingClientRect();
-          const rectPoints: Point[] = [
-            { x: rect.left, y: rect.top },
-            { x: rect.right, y: rect.top },
-            { x: rect.right, y: rect.bottom },
-            { x: rect.left, y: rect.bottom },
-          ];
+
+          let rectPoints: Point[] = [];
+
+          const precision = 3;
+          if (roundedPoints) {
+            rectPoints = [
+              //{ x: Math.round(rect.left), y: Math.round(rect.top) },
+              //{ x: Math.round(rect.right), y: Math.round(rect.top) },
+              //{ x: Math.round(rect.right), y: Math.round(rect.bottom) },
+              //{ x: Math.round(rect.left), y: Math.round(rect.bottom) },
+              {
+                x: _.round(rect.left, precision),
+                y: _.round(rect.top, precision),
+              },
+              {
+                x: _.round(rect.right, precision),
+                y: _.round(rect.top, precision),
+              },
+              {
+                x: _.round(rect.right, precision),
+                y: _.round(rect.bottom, precision),
+              },
+              {
+                x: _.round(rect.left, precision),
+                y: _.round(rect.bottom, precision),
+              },
+            ];
+          } else {
+            rectPoints = [
+              { x: rect.left, y: rect.top },
+              { x: rect.right, y: rect.top },
+              { x: rect.right, y: rect.bottom },
+              { x: rect.left, y: rect.bottom },
+            ];
+          }
 
           // add the points and lines of the rectangle to all the sets
           for (
@@ -414,7 +448,8 @@ const Borderline = ({
         /**
          * find the pathCorners of the border
          */
-        setPathCorners(findCorners(xyPointsMapSet, yxPointsMapSet));
+        const tempPathCorners = findCorners(xyPointsMapSet, yxPointsMapSet);
+        setPathCorners(tempPathCorners);
         setBounding(findBounding(xyPointsMapSet, yxPointsMapSet));
 
         /*
@@ -480,9 +515,9 @@ const Borderline = ({
         });
         setMidpoints(tempMidpoints);
 
-        // find the anchor points of each line's corner arcs
-        // each line has two midpoints, one on each side of the midpoint
-        // anchor points are either the midpoint themselves or {cornerRadius} away from the corner, whichever is closer
+        /**
+         * anchor points
+         */
 
         const tempAnchorPoints = [];
         const tempControlPoints = [];
@@ -491,10 +526,6 @@ const Borderline = ({
         for (let i = 0; i < tempLines.length; i++) {
           const line = tempLines[i];
           const midpoint = tempMidpoints[i];
-
-          /**
-           * anchor points
-           */
 
           const dx = midpoint.x - line.start.x;
           const dy = midpoint.y - line.start.y;
@@ -542,22 +573,27 @@ const Borderline = ({
           };
           tempControlPoints.push(endControlPoint);
         }
+
+        /**
+         * shift the anchor points and control points to close the loop
+         */
         let firstElement = tempAnchorPoints.shift();
         tempAnchorPoints.push(firstElement);
-
         firstElement = tempControlPoints.shift();
         tempControlPoints.push(firstElement);
-
         setCurveAnchorPoints(tempAnchorPoints);
         setCurveControlPoints(tempControlPoints);
 
+        /**
+         * create the curve path
+         */
         const tempCurvePath = [
           // starting line
           `M ${tempAnchorPoints[tempAnchorPoints.length - 1]!.x} 
              ${tempAnchorPoints[tempAnchorPoints.length - 1]!.y}
            L ${tempAnchorPoints[0]!.x} ${tempAnchorPoints[0]!.y}`,
         ];
-        let visitedCornerCount = 0;
+        let visitedCornerCount = 0; // count the number of visited corners
         for (let i = 0; i < Math.round(tempAnchorPoints.length / 2); i++) {
           const currentCurvePath: CurvePath = {
             start: tempAnchorPoints[2 * i],
@@ -576,7 +612,7 @@ const Borderline = ({
           }
 
           // handle sharp corners
-          if (pathCorners.cornerSet.has(currentCurvePath.corner)) {
+          if (tempPathCorners.cornerSet.has(currentCurvePath.corner)) {
             if (
               [
                 sharpTopLeftCorner,
@@ -585,20 +621,21 @@ const Borderline = ({
                 sharpBottomRightCorner,
               ][visitedCornerCount]
             ) {
+              // if the corner is sharp, skip the control points
               tempCurvePath.push(`
               L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
               L ${currentCurvePath.corner.x} ${currentCurvePath.corner.y} 
               L ${currentCurvePath.end.x} ${currentCurvePath.end.y}
               `);
-
+                
               visitedCornerCount++;
+              //console.log("Sharp corner");
               continue;
             }
             visitedCornerCount++;
           }
 
-          //if the line including the start and start control paths does not intesept the line including the end and end control paths, the point is skippedq
-
+          // find the direction basis of the start and end points
           const dStart = findDirectionBasis(
             currentCurvePath.start,
             currentCurvePath.startControl,
@@ -607,42 +644,43 @@ const Borderline = ({
             currentCurvePath.end,
             currentCurvePath.endControl,
           );
+
+          // check if the control points are in the same direction
           const sdx = Math.sign(dStart.dx) === Math.sign(dEnd.dx);
           const sdy = Math.sign(dStart.dy) === Math.sign(dEnd.dy);
 
+          // if skipping small ledges is enabled, skip the control points if the x and y directions are different
           if (sdx != sdy && skipSmallLedges) {
+            // find the distance between the start and end points
             const ddx = Math.abs(
               currentCurvePath.start.x - currentCurvePath.end.x,
             );
-
             const ddy = Math.abs(
               currentCurvePath.start.y - currentCurvePath.end.y,
             );
 
-            //console.log(dStart, dEnd);
-
+            //create new control points to account for the skipped points
             const newStartControl = {
               x: currentCurvePath.start.x + dStart.dx * ddx * controlRatio,
               y: currentCurvePath.start.y + dStart.dy * ddy * controlRatio,
             };
-
             const newEndControl = {
               x: currentCurvePath.end.x + dEnd.dx * ddx * controlRatio,
               y: currentCurvePath.end.y + dEnd.dy * ddy * controlRatio,
             };
 
-            tempSkippedPoints.push(newStartControl);
-            tempSkippedPoints.push(newEndControl);
+            //tempSkippedPoints.push(newStartControl);
+            //tempSkippedPoints.push(newEndControl);
 
+            // push the new curve path
             tempCurvePath.push(`
         L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
-        
         C ${newStartControl.x} ${newStartControl.y},
           ${newEndControl.x} ${newEndControl.y},
           ${currentCurvePath.end.x} ${currentCurvePath.end.y}
         `);
 
-            //otherwise, it is a corner
+            //otherwise, it is a normal curve path
           } else {
             tempCurvePath.push(`
         L ${currentCurvePath.start.x} ${currentCurvePath.start.y}
@@ -652,25 +690,23 @@ const Borderline = ({
         `);
           }
         }
-        setSkippedPoints(tempSkippedPoints);
+        //setSkippedPoints(tempSkippedPoints);
         setCurvePath(tempCurvePath.join(" "));
-        //console.log(
-        //  tempLines.length,
-        //  midpoints.length,
-        //  curveAnchorPoints.length,
-        //  curveControlPoints.length,
-        //);
       }
     };
-
-    const startTime = performance.now();
+    
+    const DEBUG = false; 
+    if (DEBUG){
+      const startTime = performance.now();
     calculateCorners();
-
     const endTime = performance.now();
     console.log("Start time:", startTime);
     console.log("End time:", endTime);
     console.log("Time taken:", endTime - startTime);
-
+    }else{
+      calculateCorners();
+    }
+    
     window.addEventListener("resize", calculateCorners);
     window.addEventListener("scroll", calculateCorners);
 
@@ -689,41 +725,52 @@ const Borderline = ({
       window.removeEventListener("resize", calculateCorners);
       window.removeEventListener("scroll", calculateCorners);
     };
-  }, [children]);
+  }, [
+    children,
+    sharpTopRightCorner,
+    sharpBottomLeftCorner,
+    sharpBottomRightCorner,
+    sharpTopLeftCorner,
+    skipSmallLedges,
+    roundedPoints,
+    pathRadius,
+    cornerRadius,
+    controlRatio,
+    pathStroke,
+    pathFill,
+  ]);
 
   return (
     <>
-      <div ref={ref} className="borderline" {...props}>
-        {children}
-      </div>
-      {/* pathCorners 
-      {Object.keys(pathCorners).map((corner, index) => (
-        <div
-          key={index}
+      <div>
+        <svg
           style={{
-            position: "absolute",
-            left: `calc(${pathCorners[corner].x}px - ${pathRadius}px)`,
-            top: `calc(${pathCorners[corner].y}px - ${pathRadius}px)`,
-            width: "calc(2 * " + pathRadius + "px)",
-            height: "calc(2 * " + pathRadius + "px)",
-            borderRadius: "50%",
-            backgroundColor: "red",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            strokeLinejoin: "bevel",
           }}
-        />
-      ))}
-       */}
-      <svg
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-          strokeLinejoin: "bevel",
-        }}
-      >
-        {/* edge lines straight
+        >
+          {/*<rect
+    width="100%"
+    height="100%"
+    fill="rgba(0, 0, 0, 0.1)"
+  />*/}
+
+          {curvePath && (
+            <path
+              d={curvePath}
+              stroke={pathStroke}
+              strokeWidth={pathRadius * 2}
+              //fill="lightblue"
+              fill={pathFill}
+            />
+          )}
+
+          {/* edge lines straight
         {lines.map((line, index) => (
           <path
             key={index}
@@ -736,18 +783,7 @@ const Borderline = ({
         ))}
          */}
 
-        {curvePath && (
-          <path
-            d={curvePath}
-            stroke="blue"
-            strokeWidth={pathRadius * 2}
-            //fill="lightblue"
-            fill="transparent"
-          />
-        )}
-      </svg>
-
-      {/* current  point location dot
+          {/* current  point location dot
       <div
         style={{
           position: "absolute",
@@ -761,7 +797,7 @@ const Borderline = ({
       />
        */}
 
-      {/* manual points location dot 
+          {/* manual points location dot 
       {manualPoints.map((manualPoint, index) => (
         <div
           key={index}
@@ -778,7 +814,7 @@ const Borderline = ({
       ))}
       */}
 
-      {/* midpoints location dot * /}
+          {/* midpoints location dot * /}
       {midpoints.map((midpoint, index) => (
         <div
           key={index}
@@ -795,7 +831,7 @@ const Borderline = ({
       ))}
       {/** */}
 
-      {/* anchor points location dot * /}
+          {/* anchor points location dot * /}
       {curveAnchorPoints.map((anchorPoint, index) => (
         <div
           key={index}
@@ -812,7 +848,7 @@ const Borderline = ({
       ))}
       {/** */}
 
-      {/* control points location dot * /}
+          {/* control points location dot * /}
       {curveControlPoints.map((controlPoint, index) => (
         <div
           key={index}
@@ -829,7 +865,7 @@ const Borderline = ({
       ))}
       {/** */}
 
-      {/* skipped points location dot */}
+          {/* skipped points location dot * /}
       {skippedPoints.map((skippedPoint, index) => (
         <div
           key={index}
@@ -845,6 +881,28 @@ const Borderline = ({
         />
       ))}
       {/** */}
+        </svg>
+
+        <div
+          ref={ref}
+          className="borderline"
+          style={{
+            position: "relative",
+          }}
+          {...props}
+        >
+          {React.Children.map(children, (child) =>
+            React.cloneElement(child, {
+              style: {
+                ...(React.isValidElement(child) && child.props.style),
+                background: "none",
+                border: "none",
+                outline: "none",
+              },
+            }),
+          )}
+        </div>
+      </div>
     </>
   );
 };
