@@ -1,4 +1,3 @@
-import Borderline from "./components/Borderline";
+import Borderline from './components/Borderline'
 
-export default Borderline;
-export { Borderline };
+export default Borderline
