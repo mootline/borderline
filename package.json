@@ -2,7 +2,7 @@
 	"name": "borderline",
 	"description": "A React component for drawing borders around groups of elements",
 	"private": false,
-	"version": "0.0.3",
+	"version": "0.1.0",
 	"type": "module",
 	"main": "dist/borderline.umd.js",
 	"module": "dist/borderline.es.js",

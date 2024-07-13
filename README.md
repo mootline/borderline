@@ -1,7 +1,5 @@
 # Borderline
 
-⚠️ **Early Testing Phase - Probably Broken** ⚠️
-
 ## A React component for drawing borders around groups of elements
 
 Inverted corners are hard. Have you ever wanted to do this?
