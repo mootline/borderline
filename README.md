@@ -26,15 +26,15 @@ npm install borderline
 import Borderline from 'borderline'
 
 function App() {
-	return (
-		<>
-			<Borderline>
-				<div>One</div>
-				<div>Two</div>
-				<div>Three</div>
-			</Borderline>
-		</>
-	)
+    return (
+        <>
+            <Borderline>
+                <div>One</div>
+                <div>Two</div>
+                <div>Three</div>
+            </Borderline>
+        </>
+    )
 }
 ```
 
@@ -85,7 +85,7 @@ Another approach would be a hull algorithm, but they do not handle concavity wel
 - It generally kinda seems like overkill to create a traversal vectorspace and fire a whole pathfinding algorithm every frame that changes. Such is the price of beauty, I suppose.
 
 TODO:
-
+- [ ] Rewrite to handle scrolling correctly
 - [ ] Smooth out skipping small ledges
 - [ ] Break apart the algorithm into smaller functions
 - [ ] Optimize the algorithm
@@ -96,4 +96,4 @@ TODO:
 - [ ] Support multiple borders for disconnected groups within the same element
 - [ ] TailwindCSS plugin component
 - [ ] Add support for different border styles
-- [ ] Figure out why the package is so big
+
