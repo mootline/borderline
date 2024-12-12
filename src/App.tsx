@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Borderline from './components/Borderline'
-import './App.css'
+import './index.css'
 
 function App() {
 	const [widthOne, setWidthOne] = useState(40)
@@ -9,8 +9,8 @@ function App() {
 	const [marginLeftOne, setMarginLeftOne] = useState(10)
 	const [marginLeftTwo, setMarginLeftTwo] = useState(100)
 	const [marginLeftThree, setMarginLeftThree] = useState(40)
-
-	// New state variables for Borderline properties
+	
+	
 	const [controlRatio, setControlRatio] = useState(0.55342686)
 	const [cornerRadius, setCornerRadius] = useState(10)
 	const [pathRadius, setPathRadius] = useState(2)
@@ -20,14 +20,11 @@ function App() {
 			<div className="h-[200px] w-[2000px] bg-slate-300"></div>
 
 			<Borderline
-				className="my-20 mx-10"
+				expandThreshold={1}
+				pathStroke="blue"
 				controlRatio={controlRatio} // 0-1
 				cornerRadius={cornerRadius} // px
-				pathRadius={pathRadius} // px
-				//sharpTopRightCorner={true}
-				//sharpTopLeftCorner={true}
-				//sharpBottomLeftCorner={true}
-				//sharpBottomRightCorner={true}
+				pathFill="lightblue"
 			>
 				<div
 					className="demo-component"
@@ -74,7 +71,7 @@ function App() {
 						max={max}
 						value={value}
 						step={(max - min) / 100}
-						onChange={(e) => setter(e.target.value)}
+						onChange={(e) => setter(parseFloat(e.target.value))}
 					/>
 					{value}
 				</div>

@@ -1,99 +1,42 @@
-# Borderline
+# vite-biome-tailwind-template
 
-## A React component for drawing borders around groups of elements
+![Default webpage screenshot](https://github.com/not-first/vite-biome-tailwind-template/assets/111339712/d0bdd8b6-6b1c-483f-acd4-dc80e1ed8bf6)
+---
 
-Inverted corners are hard. Have you ever wanted to do this?
+Simple expansion of Vite's React template to create TypeScript projects integrated with:
 
-![Three uneven divs with a border around them](public/images/simple-three-divs.png)
+- [Biome](https://biomejs.dev/): A fast formatter and linter (replacing both ESLint and Prettier) written in rust.
+- [TailwindCSS](https://tailwindcss.com/): CSS utility that provides classes to apply inline styles to components
 
-Good Luck! 😅
+## Contents
 
-Until now... Check this out:
+The unchanged vite-generated files: `.gitignore`, `index.html`, `tsconfig.app.js`, `tsconfig.node.json`, `tsconfig.json`, `vite-config` files.
 
-![Three uneven divs with a border around them, animated gif](public/gifs/simple-three-divs.gif)
+A `package.json` (and `package-lock.json`) file with ESLint, Prettier and their dependencies removed. Biome and TailwindCSS are installed as devDependencies. Available scripts are:
 
-😎
+- `dev`, `build`, `preview` as provided by Vite
+- `format`: formats the project using Biome's formatter
+- `lint`: lints the project using Biome's linter
 
-## Installation
+Tailwind config files, including the default `tailwind.config.js` and `postcss.config.js`.
 
-```bash
-npm install borderline
-```
+Biome config file `biome.json`. In addition to default config, it has git integration enabled, and has the experimental useSortedClasses (sorting of tailwind classes) rule enabled.
 
 ## Usage
 
-```jsx
-import Borderline from 'borderline'
+1. Clone to your machine. Do this by:
+    - Copying using [degit](https://github.com/Rich-Harris/degit) to download the files in the repo without the git history. (RECOMMENDED)
+      - `npx degit not-first/vite-biome-tailwind-template project-name`
 
-function App() {
-    return (
-        <>
-            <Borderline>
-                <div>One</div>
-                <div>Two</div>
-                <div>Three</div>
-            </Borderline>
-        </>
-    )
-}
-```
+    - Cloning this repo to your machine. This will keep the git history of this repo.
+       - `git clone https://github.com/not-first/vite-biome-tailwind-template.git`
 
-## Props
-
-| Prop                   | Type    | Default       | Description                                                                                     |
-| ---------------------- | ------- | ------------- | ----------------------------------------------------------------------------------------------- |
-| pathRadius             | number  | 2             | The radius of the borderline                                                                    |
-| pathStroke             | string  | "black"       | The color of the borderline                                                                     |
-| pathFill               | string  | "transparent" | The color of the fill of the borderline shape                                                   |
-| cornerRadius           | number  | 20            | The radius of the corners of the elements                                                       |
-| controlRatio           | number  | 0.551915      | The ratio of the control points for the bezier curves. The default point approximates a circle. |
-| sharpTopLeftCorner     | boolean | false         | Make the top left corner sharp                                                                  |
-| sharpTopRightCorner    | boolean | false         | Make the top right corner sharp                                                                 |
-| sharpBottomLeftCorner  | boolean | false         | Make the bottom left corner sharp                                                               |
-| sharpBottomRightCorner | boolean | false         | Make the bottom right corner sharp                                                              |
-
-## Development Props
-
-| Prop            | Type    | Default | Description                                    |
-| --------------- | ------- | ------- | ---------------------------------------------- |
-| skipSmallLedges | boolean | false   | Skip small ledges when traversing the elements |
-| roundedPoints   | boolean | true    | Round the points to the nearest integer        |
-
-## How it works
-
-The algorithm is pretty simple, it is the same one that those toy robot line-followers use:
-
-1. Find all the elements that are direct children of the Borderline component
-1. For each bounding box, create vectors between the corners in a clockwise direction
-1. Start at the top left corner and begin following the vectors
-1. At each endpoint, try to turn left, continue straight, or turn right, in that order.
-1. Continue until you reach the starting point.
-1. Calculate the midpoints, anchor points, and control points for the SVG path.
-1. Draw the path. Done!
-
-There are some finer details, like how to avoid hopping over nontraversable gaps and such, but that's basically it.
-
-Another approach would be a hull algorithm, but they do not handle concavity well and do not take advantage of the fact that we know the elements are rectangles.
-
-## Caveats
-
-- The elements must be rectangles
-- The only elements that are counted ane the direct children of the Borderline component
-- The elements must not overlap
-- There is some lag, because it needs to wait for the elements to render before calculating the path
-- The algorithm is not optimized and could be faster. If I use it enough, I might have to rewrite it.
-- It generally kinda seems like overkill to create a traversal vectorspace and fire a whole pathfinding algorithm every frame that changes. Such is the price of beauty, I suppose.
-
-TODO:
-- [ ] Rewrite to handle scrolling correctly
-- [ ] Smooth out skipping small ledges
-- [ ] Break apart the algorithm into smaller functions
-- [ ] Optimize the algorithm
-- [ ] Fix corners to use the path corners instead of the element corners
-- [ ] Add tests
-- [ ] Add examples
-- [ ] Support overlapping divs
-- [ ] Support multiple borders for disconnected groups within the same element
-- [ ] TailwindCSS plugin component
-- [ ] Add support for different border styles
-
+    - Creating a repo using this template. Note that your repo will signify that it was built from this template.
+      - Click [here](https://github.com/not-first/vite-biome-tailwind-template/generate), or the 'Use this template' green button in the top right.
+  
+2. Install dependencies though `npm install`.
+3. Alter for your needs. Remember to:
+   - Update the `LICENSE` to the correct license and name
+   - Change the `name` and `author` properties in `package.json`
+   - Clean up the `README.md`
+4. You are good to go. Start the project with `npm run dev` and you will see an altered Vite starting screen with Vite, React, Biome and Tailwind styled using Tailwind classes.

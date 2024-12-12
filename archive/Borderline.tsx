@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './borderline.css'
 import _ from 'lodash'
-import { MapSet, SerializedSet, Point, Line } from '../src/utils'
+import { MapSet, SerializedSet, Point, Line } from '../utils'
 
 interface iCorners {
 	topLeft?: Point

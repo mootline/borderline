@@ -1,43 +1,34 @@
 {
-	"name": "borderline",
-	"description": "A React component for drawing borders around groups of elements",
-	"private": false,
-	"version": "0.1.1",
-	"type": "module",
-	"main": "dist/borderline.umd.js",
-	"module": "dist/borderline.es.js",
-	"scripts": {
-		"dev": "vite",
-		"fmt": "prettier --write .",
-		"build": "vite build --outDir dist --emptyOutDir",
-		"lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-		"preview": "vite preview",
-		"publish": "npm run build && npm publish"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/mootline/borderline.git"
-	},
-	"dependencies": {
-		"lodash": "^4.17.21",
-		"react": "^18.2.0",
-		"react-dom": "^18.2.0"
-	},
-	"devDependencies": {
-		"@types/react": "^18.2.66",
-		"@types/lodash": "^4.17.0",
-		"@types/react-dom": "^18.2.22",
-		"@typescript-eslint/eslint-plugin": "^7.2.0",
-		"@typescript-eslint/parser": "^7.2.0",
-		"@vitejs/plugin-react": "^4.2.1",
-		"autoprefixer": "^10.4.19",
-		"eslint": "^8.57.0",
-		"eslint-plugin-react-hooks": "^4.6.0",
-		"eslint-plugin-react-refresh": "^0.4.6",
-		"postcss": "^8.4.38",
-		"prettier": "^3.2.5",
-		"tailwindcss": "^3.4.3",
-		"typescript": "^5.2.2",
-		"vite": "^5.2.0"
-	}
+  "name": "vite-biome-tailwind-template",
+  "author": "fakerr",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "format": "npx @biomejs/biome format --write ./",
+    "lint": "npx @biomejs/biome lint --write ./",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@turf/helpers": "^7.1.0",
+    "@turf/turf": "^7.1.0",
+    "concaveman": "^1.2.1",
+    "hull.js": "^0.2.11",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "turf": "^3.0.14"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.1"
+  }
 }
