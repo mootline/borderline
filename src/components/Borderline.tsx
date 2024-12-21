@@ -23,7 +23,7 @@ type Corner = {
 
 type Point = number[];
 
-type CornerSharpness = {
+export type CornerSharpness = {
   topRight?: boolean;
   topLeft?: boolean;
   bottomRight?: boolean;

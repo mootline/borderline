@@ -2,15 +2,28 @@
   "name": "borderline",
   "description": "A React component for drawing borders around groups of elements",
   "private": false,
-  "version": "1.0.3",
+  "version": "1.0.6",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "rm -rf dist && vite build && tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
     "fmt": "npx @biomejs/biome format --write ./",
     "lint": "npx @biomejs/biome lint --write ./",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
