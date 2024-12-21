@@ -1,5 +1,7 @@
 # Borderline
 
+[Try the demo!](https://mootline.github.io/borderline/)
+
 ## A React component for drawing borders around groups of elements
 
 Inverted corners are hard. Have you ever wanted to do this?
@@ -8,11 +10,9 @@ Inverted corners are hard. Have you ever wanted to do this?
 
 Good Luck! 😅
 
-Until now... Check this out:
+Until now... 
 
 ![Three uneven divs with a border around them, animated gif](public/gifs/simple-three-divs.gif)
-
-😎
 
 ## Installation
 
