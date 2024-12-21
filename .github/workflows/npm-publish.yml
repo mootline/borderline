@@ -31,7 +31,12 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           
       - if: steps.check.outputs.changed == 'true'
-        run: npm ci
+        name: Clean npm cache
+        run: npm cache clean --force
+          
+      - if: steps.check.outputs.changed == 'true'
+        name: Install dependencies
+        run: npm ci --force
         
       - if: steps.check.outputs.changed == 'true'
         run: npm publish --provenance --access public
