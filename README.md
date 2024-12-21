@@ -1,5 +1,5 @@
 # Borderline
-#### A React component for drawing borders around groups of elements
+### A React component for drawing borders around groups of elements
 
 [*Try the demo!*](https://mootline.github.io/borderline/)
 
