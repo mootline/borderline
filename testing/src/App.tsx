@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Borderline from "./components/Borderline";
+import Borderline from "borderline";
 
 function App() {
   // box controls

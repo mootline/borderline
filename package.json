@@ -20,6 +20,7 @@
   "scripts": {
     "dev": "vite",
     "build": "rm -rf dist && vite build && tsc -p tsconfig.build.json --declaration --emitDeclarationOnly",
+    "build:pages": "vite build --config vite.demo.config.ts",
     "fmt": "npx @biomejs/biome format --write ./",
     "lint": "npx @biomejs/biome lint --write ./",
     "preview": "vite preview",

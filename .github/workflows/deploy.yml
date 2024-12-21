@@ -35,13 +35,13 @@ jobs:
       - name: Install Dependencies
         run: npm install
       - name: Build Project
-        run: npm run build
+        run: npm run build:pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist' # Change this to the path of your build directory
+          path: './dist-pages' # Change this to the path of your build directory
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
