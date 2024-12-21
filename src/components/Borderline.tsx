@@ -151,8 +151,8 @@ const Borderline = ({
 
           if (bottom > globalBottomPoints[0][1]) {
             globalBottomPoints = [
-              [left, bottom],
               [right, bottom],
+              [left, bottom],
             ];
           } else if (bottom === globalBottomPoints[0][1]) {
             globalBottomPoints.push([left, bottom]);

@@ -39,7 +39,6 @@ function App() {
         }}
       >
         <div
-          className="demo-component"
           style={{
             width: `${widthOne}%`,
             marginLeft: `${marginLeftOne}px`,
@@ -49,7 +48,6 @@ function App() {
           One
         </div>
         <div
-          className="demo-component"
           style={{
             width: `${widthTwo}%`,
             marginLeft: `${marginLeftTwo}px`,
@@ -59,7 +57,6 @@ function App() {
           Two
         </div>
         <div
-          className="demo-component"
           style={{
             width: `${widthThree}%`,
             marginLeft: `${marginLeftThree}px`,
