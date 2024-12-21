@@ -48,8 +48,7 @@ class GlobalCorners {
 
   // given a point, determine if it is sharp (return the value of the inputted isSharp)
   isSharp(point: Point, sharpness: CornerSharpness) {
-	
-	// check top row
+    // check top row
     if (point[1] === this.topRight[1]) {
       if (point[0] === this.topRight[0]) {
         return sharpness.topRight;

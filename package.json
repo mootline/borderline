@@ -1,6 +1,7 @@
 {
-  "name": "vite-biome-tailwind-template",
-  "author": "fakerr",
+  "name": "borderline",
+  "homepage": "https://mootline.github.io/borderline",
+  "author": "mootline",
   "private": true,
   "version": "0.0.0",
   "type": "module",
