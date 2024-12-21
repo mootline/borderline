@@ -2,7 +2,6 @@
   "name": "borderline",
   "homepage": "https://mootline.github.io/borderline",
   "author": "mootline",
-  "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
