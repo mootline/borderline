@@ -1,8 +1,7 @@
 # Borderline
-
-[Try the demo!](https://mootline.github.io/borderline/)
-
 ## A React component for drawing borders around groups of elements
+
+[*Try the demo!*](https://mootline.github.io/borderline/)
 
 Inverted corners are hard. Have you ever wanted to do this?
 
@@ -16,6 +15,7 @@ Until now...
 
 ## Installation
 
+Via [NPM](https://www.npmjs.com/package/borderline):
 ```bash
 npm install borderline
 ```
